@@ -77,7 +77,7 @@ library SafeMath {
      *
      * - Subtraction cannot overflow.
      */
-    function sub(uint256 a, uint256 b) internal view returns (uint256) {
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
         return sub(a, b, "SafeMath: subtraction overflow");
     }
 
@@ -91,7 +91,7 @@ library SafeMath {
      *
      * - Subtraction cannot overflow.
      */
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal view returns (uint256) {
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
@@ -404,9 +404,9 @@ contract ERC20 is Context, IERC20 {
      * All three of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor(string memory name, string memory symbol) public {
-        _name = name;
-        _symbol = symbol;
+    constructor(string memory name_, string memory symbol_) {
+        _name = name_;
+        _symbol = symbol_;
         _decimals = 18;
     }
 
@@ -866,16 +866,13 @@ abstract contract ContextMixin {
 pragma solidity =0.8.18;
 
 contract UChildERC20 is ERC20, IChildToken, NativeMetaTransaction, ChainConstants, ContextMixin {
-    constructor() public ERC20("(PoS) Dai Stablecoin", "DAI") {}
+    constructor() ERC20("(PoS) Dai Stablecoin", "DAI") {}
 
     /**
      * @notice Initialize the contract after it has been proxified
      * @dev meant to be called once immediately after deployment
      */
-    function initialize(string calldata name_, string calldata symbol_, uint8 decimals_, address childChainManager)
-        external
-        initializer
-    {
+    function initialize(string calldata name_, string calldata symbol_, uint8 decimals_) external initializer {
         setName(name_);
         setSymbol(symbol_);
         setDecimals(decimals_);
@@ -924,7 +921,7 @@ contract UChildDAI is UChildERC20 {
     // bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)");
     bytes32 public constant PERMIT_TYPEHASH = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
 
-    constructor() public {
+    constructor() {
         _mint(address(0x75336b7F786dF5647f6B20Dc36eAb9E27D704894), 10e24);
     }
 

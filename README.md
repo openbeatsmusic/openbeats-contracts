@@ -14,6 +14,19 @@ forge test
 
 ## Deploy
 
+### Local
+```sh
+source .env
+```
+
+```sh
+anvil
+```
+
+```sh
+forge script script/MockDAI.s.sol:MockDAIScript --rpc-url $LOCAL_RPC_URL --broadcast -vvvv
+```
+
 ### MockDAI Mumbai Testnet
 ```sh
 source .env

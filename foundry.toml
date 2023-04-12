@@ -4,6 +4,8 @@ out = 'out'
 libs = ['lib']
 
 [rpc_endpoints]
+local = "${LOCAL_RPC_URL}"
 mumbai = "${MUMBAI_RPC_URL}"
+polygon = "${POLYGON_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

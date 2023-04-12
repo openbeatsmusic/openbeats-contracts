@@ -1,17 +1,22 @@
-// TODO: frh ->
-// 1. remove warnings in mockDAI sol,
-// 2. know how to pass diferent param for env keys from script
-// 3. Know how to deploy to a fixed address
-// SPDX-License-Identifier: MIT
+/// TODO: frh -> Deploy on same vanity address https://0xfoobar.substack.com/p/vanity-addresses?nthPub=22&profile-setup-message=post-subscribe-prompt
+/// SPDX-License-Identifier: MIT
 pragma solidity =0.8.18;
 
 import "forge-std/Script.sol";
 import "../src/tokens/MockDAI.sol";
+import {LibString} from "solmate/utils/LibString.sol";
 
 contract MockDAIScript is Script {
+    string privateKeyChain;
+
     UChildDAI internal dai;
 
-    function setUp() public view {
+    function setUp() public {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        privateKeyChain = string.concat("PRIVATE_KEY_", LibString.toString(chainId));
         this;
     }
 
@@ -20,7 +25,7 @@ contract MockDAIScript is Script {
     }
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint(privateKeyChain);
         vm.startBroadcast(deployerPrivateKey);
 
         deployTestnet();
