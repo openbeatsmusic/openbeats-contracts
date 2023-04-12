@@ -7,6 +7,7 @@ import "./libraries/TransferHelper.sol";
 contract Playlist is ERC1155 {
     // TODO: frh -> check how I should change this
     // TODO: frh -> check if payment token will be used for withdrawals
+    // TODO: frh -> supportinterface
     uint256 public constant TOKEN_AMOUNT = 10000;
     uint256 public monthlyFee = 4 * 1e6;
     address public paymentToken;
