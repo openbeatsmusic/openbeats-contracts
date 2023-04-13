@@ -8,3 +8,6 @@
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
 solc = "0.8.18"
+[submodule "lib/chainlink"]
+	path = lib/chainlink
+	url = https://github.com/smartcontractkit/chainlink
