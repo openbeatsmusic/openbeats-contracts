@@ -28,6 +28,7 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 - (1) add only owner to getFeesEarned
 - (1) should be called mint a new playlist?
 - (1) etherscan api key in deployments -> example -> deploy-sepolia :; @forge script script/${contract}.s.sol:Deploy${contract} --rpc-url ${SEPOLIA_RPC_URL}  --private-key ${PRIVATE_KEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_API_KEY}  -vvvv
+- (1) See if deploy should be with ledger because of what could be changed with permissions, setOwner should allow to transfer Ownership
 - (2) check if mint could be gasless
 - (2) check expiry date correct in permit and set up tests with current time
 - (2) order variables and comments
