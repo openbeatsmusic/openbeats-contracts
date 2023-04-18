@@ -53,3 +53,4 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 - (2) check if mint could be gasless
 - (2) check expiry date correct in permit and set up tests with current time
 - (2) order variables and comments
+- (2) Deploy on same vanity address https://0xfoobar.substack.com/p/vanity-addresses?nthPub=22&profile-setup-message=post-subscribe-prompt

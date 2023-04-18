@@ -1,4 +1,4 @@
-/// TODO: frh -> (1) try makefile (2) Deploy on same vanity address https://0xfoobar.substack.com/p/vanity-addresses?nthPub=22&profile-setup-message=post-subscribe-prompt
+/// TODO: frh -> (1) try makefile
 /// SPDX-License-Identifier: MIT
 pragma solidity =0.8.18;
 
