@@ -2,27 +2,27 @@
 pragma solidity =0.8.18;
 
 import "forge-std/Test.sol";
-import "../src/Playlist.sol";
+import "src/Playlist.sol";
 import "./utils/SigUtils.sol";
-import "../src/tokens/MockDAI.sol";
+import "src/tokens/MockDAI.sol";
 
 contract PlaylistTest is Test {
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
 
-    uint256 tokenAmount = 10000;
+    uint24 tokenAmount = 10000;
     uint24 id = 0;
-    uint256 plan = 4 * 1e18;
-    uint256 royaltyLength = 30;
-    uint256 royalty = plan / royaltyLength * 3 / 4;
+    uint64 plan = 4 * 1e18;
+    uint8 royaltyLength = 30;
+    uint64 royaltyAmount = plan / royaltyLength * 3 / 4;
+
+    uint256 internal alicePrivateKey;
+    address alice;
 
     Playlist public playlist;
     Playlist.Royalty[] royalties;
 
     SigUtils internal sigUtils;
     UChildDAI internal dai;
-
-    uint256 internal alicePrivateKey;
-    address alice;
 
     function setUp() public {
         dai = new UChildDAI();
@@ -57,24 +57,24 @@ contract PlaylistTest is Test {
 
     function setUpMint() public {
         vm.startPrank(alice);
-        for (uint24 i = 0; i < royaltyLength; i++) {
+        for (uint8 i = 0; i < royaltyLength; i++) {
             playlist.mint(i, tokenAmount);
         }
         vm.stopPrank();
     }
 
     function setUpRoyalties() public {
-        for (uint24 i = 0; i < royaltyLength; i++) {
-            royalties.push(Playlist.Royalty(i, royalty));
+        for (uint8 i = 0; i < royaltyLength; i++) {
+            royalties.push(Playlist.Royalty(i, royaltyAmount));
         }
     }
 
-    function testDealERC20() public {
+    function test_DealERC20() public {
         deal(address(dai), address(alice), plan);
         assertEq(dai.balanceOf(address(alice)), plan);
     }
 
-    function testMint() public {
+    function test_Mint() public {
         uint24 _id = 1 + uint24(royaltyLength);
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(alice, address(0), alice, _id, tokenAmount);
@@ -83,12 +83,12 @@ contract PlaylistTest is Test {
         assertEq(playlist.balanceOf(alice, id), tokenAmount);
     }
 
-    function testPayPlan() public {
+    function test_PayPlan() public {
         assertEq(dai.balanceOf(address(alice)), plan);
         playlist.payPlan(alice, royalties);
         assertEq(playlist.getFeesEarned(), plan * 1 / 4);
-        for (uint24 i = 0; i < royaltyLength; i++) {
-            assertEq(playlist.balanceOfPlaylist(i), royalty);
+        for (uint8 i = 0; i < royaltyLength; i++) {
+            assertEq(playlist.balanceOfPlaylist(i), royaltyAmount);
         }
         assertEq(dai.balanceOf(address(alice)), 0);
     }

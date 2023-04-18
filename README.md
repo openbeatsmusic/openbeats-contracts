@@ -40,6 +40,8 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 
 ### TODO:
 
+- (1) Implement ERC2981 royalties
+- (1) See metadata for ERC1155 and how is displayed on OpenSea
 - (1) Deploy and check if internal works as expected for receiveRoyalties
 - (1) balanceOfUser
 - (1) Playlist tokens have 3% commission and can only be sold on my platform
