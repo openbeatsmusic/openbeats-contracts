@@ -2,9 +2,11 @@
 pragma solidity =0.8.18;
 
 import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
+/// No need to resetRoyalty in burn since playlist has no burn implemented
+import {ERC2981} from "openzeppelin-contracts/contracts/token/common/ERC2981.sol";
 import "./libraries/TransferHelper.sol";
 
-contract Playlist is ERC1155 {
+contract Playlist is ERC1155, ERC2981 {
     struct Royalty {
         uint24 id;
         uint64 amount;
@@ -14,6 +16,8 @@ contract Playlist is ERC1155 {
     /// NFT id => balance
     mapping(uint24 => uint256) public balanceOfPlaylist;
 
+    /// OpenBeats
+    address public openbeats;
     /// Payment token
     address public currency;
     /// Monthly plan
@@ -26,8 +30,20 @@ contract Playlist is ERC1155 {
     uint96 private feesEarned;
     uint8 public royaltyLength = 30;
 
-    constructor(address _currency) ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/getbyid/{id}") {
+    constructor(address _currency, address _openbeats)
+        ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/getbyid/{id}")
+    {
         currency = _currency;
+        openbeats = _openbeats;
+        // Set royalty to 5%
+        _setDefaultRoyalty(_openbeats, 500);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     function mint(uint24 id, uint24 supply) public {

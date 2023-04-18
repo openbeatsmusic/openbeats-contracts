@@ -9,14 +9,21 @@ import "src/tokens/MockDAI.sol";
 contract PlaylistTest is Test {
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
 
+    bytes4 public constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
+    bytes4 public constant INTERFACE_ID_ERC2981 = 0x2a55205a;
+
     uint24 tokenAmount = 10000;
     uint24 id = 0;
     uint64 plan = 4 * 1e18;
     uint8 royaltyLength = 30;
     uint64 royaltyAmount = plan / royaltyLength * 3 / 4;
 
+    uint8 OpenBeatsCreatorRoyalties = 5;
+    uint8 tokenSalePrice = 100;
+
     uint256 internal alicePrivateKey;
     address alice;
+    address OpenBeats = address(2);
 
     Playlist public playlist;
     Playlist.Royalty[] royalties;
@@ -26,7 +33,7 @@ contract PlaylistTest is Test {
 
     function setUp() public {
         dai = new UChildDAI();
-        playlist = new Playlist(address(dai));
+        playlist = new Playlist(address(dai), OpenBeats);
         sigUtils = new SigUtils(dai.getDomainSeperator());
 
         /// We get alice private keys to be able to sign, alice = (private keys [0] of anvil)
@@ -104,5 +111,16 @@ contract PlaylistTest is Test {
         royalties.push(Playlist.Royalty(30, plan));
         vm.expectRevert("MaxAmount");
         playlist.payPlan(alice, royalties);
+    }
+
+    function test_RoyaltyInfo() public {
+        (address receiver, uint256 royaltyAmount) = playlist.royaltyInfo(id, tokenSalePrice);
+        assertEq(receiver, OpenBeats);
+        assertEq(royaltyAmount, OpenBeatsCreatorRoyalties);
+    }
+
+    function test_SupportsInterface() public {
+        assertEq(playlist.supportsInterface(INTERFACE_ID_ERC1155), true);
+        assertEq(playlist.supportsInterface(INTERFACE_ID_ERC2981), true);
     }
 }
