@@ -18,6 +18,8 @@ contract Playlist is ERC1155, ERC2981 {
 
     /// OpenBeats
     address public openbeats;
+    // Set royalty to 5%
+    uint16 private royalty = 5;
     /// Payment token
     address public currency;
     /// Monthly plan
@@ -35,8 +37,7 @@ contract Playlist is ERC1155, ERC2981 {
     {
         currency = _currency;
         openbeats = _openbeats;
-        // Set royalty to 5%
-        _setDefaultRoyalty(_openbeats, 500);
+        _setDefaultRoyalty(_openbeats, royalty * 100);
     }
 
     /**

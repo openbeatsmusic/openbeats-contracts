@@ -114,9 +114,9 @@ contract PlaylistTest is Test {
     }
 
     function test_RoyaltyInfo() public {
-        (address receiver, uint256 royaltyAmount) = playlist.royaltyInfo(id, tokenSalePrice);
+        (address receiver, uint256 _royaltyAmount) = playlist.royaltyInfo(id, tokenSalePrice);
         assertEq(receiver, OpenBeats);
-        assertEq(royaltyAmount, OpenBeatsCreatorRoyalties);
+        assertEq(_royaltyAmount, OpenBeatsCreatorRoyalties);
     }
 
     function test_SupportsInterface() public {
