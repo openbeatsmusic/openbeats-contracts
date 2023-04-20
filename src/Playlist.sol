@@ -17,6 +17,9 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
     /// NFT id => balance
     mapping(uint24 => uint256) public balanceOfPlaylist;
 
+    string public constant name = "OpenBeats";
+    string public constant symbol = "OB";
+
     // Id of next minted nft
     uint24 private _id = 0;
 
