@@ -19,7 +19,7 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 
 ### TODO:
 
-- (1) See metadata for ERC1155 and how is displayed on OpenSea
+- (1) See metadata for ERC1155 and how is displayed on OpenSea, (Create a collection)
 - (1) See metadata for ERC1155 on mumbaiscan, verify and so on
 - (1) Deploy and check if internal works as expected for receiveRoyalties
 - (1) balanceOfUser
@@ -27,7 +27,6 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 - (1) check if payment token will be used for withdrawals
 - (1) can there be an attack from internal contract inheritance?
 - (1) add only owner to getFeesEarned
-- (1) etherscan api key in deployments -> example -> deploy-sepolia :; @forge script script/${contract}.s.sol:Deploy${contract} --rpc-url ${SEPOLIA_RPC_URL}  --private-key ${PRIVATE_KEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_API_KEY}  -vvvv
 - (1) See if deploy should be with ledger because of what could be changed with permissions, setOwner should allow to transfer Ownership
 - (2) check if mint could be gasless
 - (2) check expiry date correct in permit and set up tests with current time
