@@ -2,11 +2,12 @@
 pragma solidity =0.8.18;
 
 import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
+import {ERC1155Supply} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 /// No need to resetRoyalty in burn since playlist has no burn implemented
 import {ERC2981} from "openzeppelin-contracts/contracts/token/common/ERC2981.sol";
 import "./libraries/TransferHelper.sol";
 
-contract Playlist is ERC1155, ERC2981 {
+contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
     struct Royalty {
         uint24 id;
         uint64 amount;
@@ -15,6 +16,9 @@ contract Playlist is ERC1155, ERC2981 {
     /// Maximum number of playlists uint24 = 16,777,215;
     /// NFT id => balance
     mapping(uint24 => uint256) public balanceOfPlaylist;
+
+    // Id of next minted nft
+    uint24 private id = 0;
 
     /// OpenBeats
     address public openbeats;
@@ -41,19 +45,28 @@ contract Playlist is ERC1155, ERC2981 {
     }
 
     /**
-     * @dev See {IERC165-supportsInterface}.
+     * @dev See {ERC1155Supply-_beforeTokenTransfer}.
      */
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
-    function mint(uint24 id, uint24 supply) public {
-        super._mint(_msgSender(), id, supply, "");
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal override (ERC1155, ERC1155Supply){
+        ERC1155Supply._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 
     function getFeesEarned() public view returns (uint256) {
         return feesEarned;
     }
+
+    function mint(uint24 supply) public {
+        super._mint(_msgSender(), id, supply, "");
+        id += 1;
+    }
+
 
     function payPlan(address from, Royalty[] calldata royalties) public {
         uint64 _maxAmount;
@@ -77,5 +90,12 @@ contract Playlist is ERC1155, ERC2981 {
             }
         }
         TransferHelper.safeTransferFrom(currency, from, address(this), plan);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }
