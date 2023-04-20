@@ -65,7 +65,7 @@ contract PlaylistTest is Test {
     function setUpMint() public {
         vm.startPrank(alice);
         for (uint8 i = 0; i < royaltyLength; i++) {
-            playlist.mint(tokenAmount);
+            playlist.mint(i, tokenAmount);
         }
         vm.stopPrank();
     }
@@ -86,7 +86,7 @@ contract PlaylistTest is Test {
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(alice, address(0), alice, _id, tokenAmount);
         vm.prank(alice);
-        playlist.mint(tokenAmount);
+        playlist.mint(_id, tokenAmount);
         assertEq(playlist.balanceOf(alice, _id), tokenAmount);
     }
 

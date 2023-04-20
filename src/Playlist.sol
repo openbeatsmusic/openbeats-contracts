@@ -18,7 +18,7 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
     mapping(uint24 => uint256) public balanceOfPlaylist;
 
     // Id of next minted nft
-    uint24 private id = 0;
+    uint24 private _id = 0;
 
     /// OpenBeats
     address public openbeats;
@@ -62,9 +62,10 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
         return feesEarned;
     }
 
-    function mint(uint24 supply) public {
+    function mint(uint24 id, uint24 supply) public {
+        require(id == _id, "Wrong id");
         super._mint(_msgSender(), id, supply, "");
-        id += 1;
+        _id += 1;
     }
 
 
