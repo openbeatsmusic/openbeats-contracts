@@ -33,7 +33,7 @@ contract Playlist is ERC1155, ERC2981 {
     uint8 public royaltyLength = 30;
 
     constructor(address _currency, address _openbeats)
-        ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/getbyid/{id}")
+        ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/metadata/{id}")
     {
         currency = _currency;
         openbeats = _openbeats;
