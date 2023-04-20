@@ -19,7 +19,6 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 
 ### TODO:
 
-- (1) See metadata for ERC1155 and how is displayed on OpenSea, (Create a collection)
 - (1) Deploy and check if internal works as expected for receiveRoyalties
 - (1) balanceOfUser
 - (1) check how I should change variables of playlist
