@@ -1,0 +1,15 @@
+{
+    "extends": "solhint:recommended",
+    "rules": {
+        "compiler-version": ["error", "^0.8.17"],
+        "func-name-mixedcase": "off",
+        "func-param-name-mixedcase": "error",
+        "func-order": "error",
+        "max-line-length": ["error", 120],
+        "modifier-name-mixedcase": "error",
+        "named-parameters-mapping": "error",
+        "no-console": "warn",
+        "ordering": "error",
+        "private-vars-leading-underscore": ["error", { "strict": false }]
+    }
+}
