@@ -24,13 +24,15 @@ contract PlaylistTest is Test {
     function setUp() public {
         setUpDate();
         dai = new UChildDAI();
-        playlist = new Playlist(address(dai), address(2));
 
         /// We get alice private keys to be able to sign, alice = (private keys [0] of anvil)
         alicePrivateKey = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
         alice = vm.addr(alicePrivateKey);
+        vm.prank(alice);
+        playlist = new Playlist(address(dai));
+
         setUpPermit();
-        deal(address(dai), address(alice), aliceBalance);
+        deal(address(dai), alice, aliceBalance);
     }
 
     function setUpDate() public {
@@ -57,7 +59,7 @@ contract PlaylistTest is Test {
         vm.prank(alice);
         playlist.mint(id, tokenAmount);
         assertEq(playlist.balanceOf(alice, id), tokenAmount);
-        assertEq(playlist.depositsOf(address(alice)), 0);
+        assertEq(playlist.depositsOf(alice), 0);
     }
 
     function test_PayPlan() public {
@@ -99,52 +101,51 @@ contract PlaylistTest is Test {
         for (uint8 i = 0; i < royaltyLength; i++) {
             playlist.mint(i, tokenAmount);
         }
-        vm.stopPrank();
-        assertEq(dai.balanceOf(address(alice)), aliceBalance);
+        assertEq(dai.balanceOf(alice), aliceBalance);
         playlist.payPlan(alice, royalties);
         assertEq(playlist.getFeesEarned(), plan * 1 / 4);
+        vm.stopPrank();
 
         for (uint8 i = 0; i < royaltyLength; i++) {
             assertEq(playlist.treasuryOfPlaylist(i, playlist.monthCounter()), royaltyAmount);
         }
-        assertEq(dai.balanceOf(address(alice)), aliceBalance - plan);
+        assertEq(dai.balanceOf(alice), aliceBalance - plan);
     }
 
-    function test__SafeTransferFrom() public {
-        uint24 id = 0;
-        uint256 amount = 3333;
+    function test_Owner() public {
+        assertEq(playlist.owner(), alice);
+    }
+
+    function test_RevertWhen_AmountExceedPlan() public {
         Playlist.Royalty[30] memory royalties;
-        royalties[0] = Playlist.Royalty(id, plan * 3 / 4);
-
-        vm.startPrank(alice);
-        playlist.mint(id, tokenAmount);
-
-        for (uint8 i = 0; i < 3; i++) {
-            playlist.payPlan(alice, royalties);
-            skip(30 days);
-        }
-        playlist.safeTransferFrom(alice, address(3), id, amount, "");
-        assertEq(playlist.depositsOf(address(alice)), plan * 3 / 4 * 2);
-
-        skip(5 days);
-
-        for (uint8 i = 0; i < 3; i++) {
-            playlist.payPlan(alice, royalties);
-            skip(30 days);
-        }
-        vm.stopPrank();
-        vm.prank(address(3));
-        playlist.safeTransferFrom(address(3), alice, id, amount, "");
-        assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 4 * amount / tokenAmount);
-
         vm.prank(alice);
-        playlist.safeTransferFrom(alice, address(4), id, amount, "");
-        assertEq(playlist.depositsOf(address(4)), 0);
+        royalties[0] = Playlist.Royalty(0, plan);
+        vm.expectRevert("MaxAmount");
+        playlist.payPlan(alice, royalties);
+    }
 
-        vm.prank(address(4));
-        playlist.safeTransferFrom(address(4), address(5), id, amount, "");
-        assertEq(playlist.depositsOf(address(4)), 0);
-        assertEq(playlist.depositsOf(address(5)), 0);
+    function test_RevertWhen_CallerIsNotOwner() public {
+        Playlist.Royalty[30] memory royalties;
+        royalties[0] = Playlist.Royalty(0, plan / 4 * 3);
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.startPrank(address(2));
+        playlist.payPlan(alice, royalties);
+        vm.expectRevert("Ownable: caller is not the owner");
+        playlist.getFeesEarned();
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_RenounceOwnership() public {
+        vm.prank(alice);
+        vm.expectRevert("Cannot renounce ownership");
+        playlist.renounceOwnership();
+        assertEq(playlist.owner(), alice);
+    }
+
+    function test_RoyaltyInfo() public {
+        (address receiver, uint256 _royaltyAmount) = playlist.royaltyInfo(0, 100);
+        assertEq(receiver, playlist.owner());
+        assertEq(_royaltyAmount, 5);
     }
 
     function test__SafeBatchTransferFrom() public {
@@ -173,7 +174,7 @@ contract PlaylistTest is Test {
             skip(30 days);
         }
         playlist.safeBatchTransferFrom(alice, address(3), ids, amounts, "");
-        assertEq(playlist.depositsOf(address(alice)), plan * 3 / 4 * 4);
+        assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 4);
 
         skip(5 days);
 
@@ -197,11 +198,41 @@ contract PlaylistTest is Test {
         assertEq(playlist.depositsOf(address(5)), 0);
     }
 
-    function test_RevertWhen_AmountExceedPlan() public {
+    function test__SafeTransferFrom() public {
+        uint24 id = 0;
+        uint256 amount = 3333;
         Playlist.Royalty[30] memory royalties;
-        royalties[0] = Playlist.Royalty(0, plan);
-        vm.expectRevert("MaxAmount");
-        playlist.payPlan(alice, royalties);
+        royalties[0] = Playlist.Royalty(id, plan * 3 / 4);
+
+        vm.startPrank(alice);
+        playlist.mint(id, tokenAmount);
+
+        for (uint8 i = 0; i < 3; i++) {
+            playlist.payPlan(alice, royalties);
+            skip(30 days);
+        }
+        playlist.safeTransferFrom(alice, address(3), id, amount, "");
+        assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 2);
+
+        skip(5 days);
+
+        for (uint8 i = 0; i < 3; i++) {
+            playlist.payPlan(alice, royalties);
+            skip(30 days);
+        }
+        vm.stopPrank();
+        vm.prank(address(3));
+        playlist.safeTransferFrom(address(3), alice, id, amount, "");
+        assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 4 * amount / tokenAmount);
+
+        vm.prank(alice);
+        playlist.safeTransferFrom(alice, address(4), id, amount, "");
+        assertEq(playlist.depositsOf(address(4)), 0);
+
+        vm.prank(address(4));
+        playlist.safeTransferFrom(address(4), address(5), id, amount, "");
+        assertEq(playlist.depositsOf(address(4)), 0);
+        assertEq(playlist.depositsOf(address(5)), 0);
     }
 
     function test_SupportsInterface() public {

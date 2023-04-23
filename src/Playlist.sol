@@ -4,12 +4,13 @@ pragma solidity =0.8.18;
 
 import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 /// No need to resetRoyalty in burn since playlist has no burn implemented
 import {ERC2981} from "openzeppelin-contracts/contracts/token/common/ERC2981.sol";
 import "./libraries/TransferHelper.sol";
 import {Escrow} from "./Escrow.sol";
 
-contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
+contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
     struct Royalty {
         uint24 id;
         uint64 amount;
@@ -27,8 +28,6 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
     uint64 public fee = 1 * 1e18;
     uint24 public monthCounter = 1;
     string public name = "OpenBeats";
-    // TODO: frh -> check if remove after owner
-    address public openbeats;
     uint64 public plan = 4 * 1e18;
     string public symbol = "OB";
 
@@ -42,13 +41,11 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
     uint16 private _royalty = 5;
     uint256 private _timestamp;
 
-    constructor(address currency_, address openbeats_)
-        ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/metadata/{id}")
-    {
+    /// Royalties are sent to owner of the contract
+    constructor(address currency_) ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/metadata/{id}") {
         _escrow = new Escrow(currency_);
         currency = currency_;
-        openbeats = openbeats_;
-        _setDefaultRoyalty(openbeats_, _royalty * 100);
+        _setDefaultRoyalty(super.owner(), _royalty * 100);
         _timestamp = block.timestamp;
     }
 
@@ -59,7 +56,7 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
         super._mint(_msgSender(), id, supply, "");
     }
 
-    function payPlan(address from, Royalty[30] calldata royalties) public {
+    function payPlan(address from, Royalty[30] calldata royalties) public onlyOwner {
         uint64 maxAmount;
 
         for (uint8 i = 0; i < royalties.length; i++) {
@@ -95,8 +92,13 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981 {
         return _escrow.depositsOf(payee);
     }
 
-    function getFeesEarned() public view returns (uint256) {
+    function getFeesEarned() public view onlyOwner returns (uint256) {
         return _feesEarned;
+    }
+
+    /// @dev Override and disable this function
+    function renounceOwnership() public view override onlyOwner {
+        revert("Cannot renounce ownership");
     }
 
     /**

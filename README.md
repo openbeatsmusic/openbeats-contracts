@@ -24,7 +24,7 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 - (0) Get Owned but not depositted of royalties, in case you do it add this check to mint and safe transfer and safetransfer batch events
 - (1) test reentrancy attack on safetransferfrom
 - (1) Deploy and check if internal works as expected for withdraw
-- (1) 1. add only owner to getFeesEarned,payPlan, revise the rest 2. see erc1155pausable with owner, 3. check how I should change variables of playlist with owner
+- (1) 2. see erc1155pausable with owner, 3. check how I should change variables of playlist with owner OR if I should do it with proxy somehow
 - (1) Contract proxy for upgrades, and check if gas increments
 - (1) CRON don't send decimals
 - (2) check if mint could be gasless

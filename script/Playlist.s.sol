@@ -11,18 +11,19 @@ contract DeployPlaylist is Script {
 
     function setUp() public {
         uint256 chainId;
+
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             chainId := chainid()
         }
         currency = vm.envAddress(string.concat("CURRENCY_", LibString.toString(chainId)));
-        openbeats = vm.envAddress(string.concat("OB_ADDRESS_", LibString.toString(chainId)));
         this;
     }
 
-    function run() external {
+    function run() public {
         vm.startBroadcast();
 
-        new Playlist(currency, openbeats);
+        new Playlist(currency);
 
         vm.stopBroadcast();
     }
