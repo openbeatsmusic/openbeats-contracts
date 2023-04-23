@@ -25,6 +25,7 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
     mapping(uint24 => mapping(address => mapping(uint24 => uint256))) private _balanceOfLastMonth;
 
     address public currency;
+    bool public paused = false;
     uint64 public fee = 1 * 1e18;
     uint24 public monthCounter = 1;
     string public name = "OpenBeats";
@@ -84,10 +85,13 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         TransferHelper.safeTransferFrom(currency, from, address(this), plan);
     }
 
-    /**
-     * @dev Returns the payments owed to an address.
-     * @param payee The creditor's address.
-     */
+    /// @dev Pauses the contract transfers, sales and mints
+    function setPaused(bool _paused) public onlyOwner {
+        paused = _paused;
+    }
+
+    /// @dev Returns the payments owed to an address.
+    /// @param payee The creditor's address.
     function depositsOf(address payee) public view returns (uint256) {
         return _escrow.depositsOf(payee);
     }
@@ -101,16 +105,11 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         revert("Cannot renounce ownership");
     }
 
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
+    /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
-    /**
-     * @dev See {ERC1155Supply-_beforeTokenTransfer}.
-     */
     function _beforeTokenTransfer(
         address operator,
         address from,
@@ -119,6 +118,7 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         uint256[] memory amounts,
         bytes memory data
     ) internal override(ERC1155, ERC1155Supply) {
+        require(!paused, "Token transfers paused");
         ERC1155Supply._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         /// Last month for calculations, since fees are still flowing on monthCounter
         uint24 lastMonth = monthCounter - 1;

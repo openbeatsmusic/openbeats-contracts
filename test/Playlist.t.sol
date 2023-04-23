@@ -116,6 +116,16 @@ contract PlaylistTest is Test {
         assertEq(playlist.owner(), alice);
     }
 
+    function test_Paused() public {
+        vm.startPrank(alice);
+        assertEq(playlist.paused(), false);
+        playlist.setPaused(true);
+        assertEq(playlist.paused(), true);
+        playlist.setPaused(false);
+        assertEq(playlist.paused(), false);
+        vm.stopPrank();
+    }
+
     function test_RevertWhen_AmountExceedPlan() public {
         Playlist.Royalty[30] memory royalties;
         vm.prank(alice);
@@ -132,6 +142,20 @@ contract PlaylistTest is Test {
         playlist.payPlan(alice, royalties);
         vm.expectRevert("Ownable: caller is not the owner");
         playlist.getFeesEarned();
+        vm.expectRevert("Ownable: caller is not the owner");
+        playlist.setPaused(true);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_Paused() public {
+        uint24 id = 0;
+        vm.startPrank(alice);
+        playlist.mint(id, tokenAmount);
+        playlist.setPaused(true);
+        vm.expectRevert("Token transfers paused");
+        playlist.mint(1, tokenAmount);
+        vm.expectRevert("Token transfers paused");
+        playlist.safeTransferFrom(alice, address(3), id, 3333, "");
         vm.stopPrank();
     }
 
