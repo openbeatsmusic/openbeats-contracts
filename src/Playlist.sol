@@ -11,13 +11,8 @@ import "./libraries/TransferHelper.sol";
 import {Escrow} from "./Escrow.sol";
 
 contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
-    struct Royalty {
-        uint24 id;
-        uint64 amount;
-    }
-
     /// NFT id => monthCounter =>  treasuryOfPlaylist
-    mapping(uint24 => mapping(uint24 => uint256)) public treasuryOfPlaylist;
+    mapping(uint256 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
 
     /// NFT id => Address => _lastMonthIncDeposited
     mapping(uint24 => mapping(address => uint24)) private _lastMonthIncDeposited;
@@ -27,7 +22,7 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
     address public currency;
     bool public paused = false;
     uint64 public fee = 1 * 1e18;
-    uint24 public monthCounter = 1;
+    uint256 public monthCounter = 1;
     string public name = "OpenBeats";
     uint64 public plan = 4 * 1e18;
     string public symbol = "OB";
@@ -57,32 +52,36 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         super._mint(_msgSender(), id, supply, "");
     }
 
-    function payPlan(address from, Royalty[30] calldata royalties) public onlyOwner {
-        uint64 maxAmount;
+    function payPlan(address from, uint256[30] calldata ids, uint256[30] calldata amounts) public onlyOwner {
+        // uint64 maxAmount;
 
-        for (uint8 i = 0; i < royalties.length; i++) {
-            unchecked {
-                maxAmount += royalties[i].amount;
-            }
-        }
-        require(maxAmount <= _maxAmount, "MaxAmount");
+        // for (uint8 i = 0; i < royalties.length; i++) {
+        //     unchecked {
+        //         maxAmount += royalties[i].amount;
+        //     }
+        // }
+        // require(maxAmount <= _maxAmount, "MaxAmount");
 
-        uint256 timestampDiff = block.timestamp - _timestamp;
-        if (timestampDiff >= 30 days) {
-            monthCounter += 1;
-            _timestamp = block.timestamp;
-        }
+        // uint256 timestampDiff = block.timestamp - _timestamp;
+        // if (timestampDiff >= 30 days) {
+        //     monthCounter += 1;
+        //     _timestamp = block.timestamp;
+        // }
 
+        // unchecked {
+        //     _feesEarned += fee;
+        // }
+        uint256 _monthCounter = monthCounter;
         unchecked {
-            _feesEarned += fee;
-        }
-        for (uint8 i = 0; i < royalties.length; i++) {
-            /// Cannot overflow because the sum of all playlist balances can't exceed the max uint256 value.
-            unchecked {
-                treasuryOfPlaylist[royalties[i].id][monthCounter] += royalties[i].amount;
+            for (uint256 i = 0; i < ids.length; i++) {
+                uint256 id = ids[i];
+                uint256 amount = amounts[i];
+
+                /// Cannot overflow because the sum of all playlist balances can't exceed the max uint256 value.
+                treasuryOfPlaylist[id][_monthCounter] += amount;
             }
         }
-        TransferHelper.safeTransferFrom(currency, from, address(this), plan);
+        // TransferHelper.safeTransferFrom(currency, from, address(this), plan);
     }
 
     /// @dev Pauses the contract transfers, sales and mints
@@ -119,43 +118,43 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         bytes memory data
     ) internal override(ERC1155, ERC1155Supply) {
         require(!paused, "Token transfers paused");
-        ERC1155Supply._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        /// Last month for calculations, since fees are still flowing on monthCounter
-        uint24 lastMonth = monthCounter - 1;
+        // ERC1155Supply._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        // /// Last month for calculations, since fees are still flowing on monthCounter
+        // uint24 lastMonth = monthCounter - 1;
 
-        /// If mint
-        if (from == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint24 id = uint24(ids[i]);
-                _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
-                _lastMonthIncDeposited[id][to] = lastMonth;
-            }
-        }
-        /// If transfer or sale
-        if (from != address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint24 id = uint24(ids[i]);
+        // /// If mint
+        // if (from == address(0)) {
+        //     for (uint256 i = 0; i < ids.length; ++i) {
+        //         uint24 id = uint24(ids[i]);
+        //         _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
+        //         _lastMonthIncDeposited[id][to] = lastMonth;
+        //     }
+        // }
+        // /// If transfer or sale
+        // if (from != address(0)) {
+        //     for (uint256 i = 0; i < ids.length; ++i) {
+        //         uint24 id = uint24(ids[i]);
 
-                uint24 fromLastMonth = _lastMonthIncDeposited[id][from];
-                bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
+        //         uint24 fromLastMonth = _lastMonthIncDeposited[id][from];
+        //         bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
 
-                if (shouldDeposit) {
-                    uint256 amount = 0;
-                    for (uint24 m = fromLastMonth; m < monthCounter; ++m) {
-                        amount +=
-                            treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
-                    }
-                    _balanceOfLastMonth[id][from][fromLastMonth] = 0;
-                    _escrow.deposit(amount, from);
-                } else {
-                    _balanceOfLastMonth[id][from][lastMonth] = 0;
-                }
-                delete _lastMonthIncDeposited[id][from];
+        //         if (shouldDeposit) {
+        //             uint256 amount = 0;
+        //             for (uint24 m = fromLastMonth; m < monthCounter; ++m) {
+        //                 amount +=
+        //                     treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
+        //             }
+        //             _balanceOfLastMonth[id][from][fromLastMonth] = 0;
+        //             _escrow.deposit(amount, from);
+        //         } else {
+        //             _balanceOfLastMonth[id][from][lastMonth] = 0;
+        //         }
+        //         delete _lastMonthIncDeposited[id][from];
 
-                /// After all the calculations set the info of receiver (to)
-                _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
-                _lastMonthIncDeposited[id][to] = lastMonth;
-            }
-        }
+        //         /// After all the calculations set the info of receiver (to)
+        //         _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
+        //         _lastMonthIncDeposited[id][to] = lastMonth;
+        //     }
+        // }
     }
 }
