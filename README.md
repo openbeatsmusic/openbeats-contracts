@@ -19,6 +19,8 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 
 ### TODO:
 
+- (0) Check which fuzz testing, different variables, can be done in tests. Check if doing invariant. Use ffi to reproduce real payments. 
+- (0) How to get testing code coverage on foundry
 - (0) Think if escrow functions should be external, think if escrow should be updated, i think not
 - (0) Check if transferFrom on escrow withdraw works or permit needed
 - (0) Events on _beforeTokenTransfer(after events), think, should do getOwnedRoyalties and depositsOf()
@@ -30,3 +32,5 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 - (1) CRON don't send decimals
 - (2) check if mint could be gasless, also comment the functions left in contract
 - (2) check expiry date correct in permit and set up tests with current time
+- (2) get contract address with many zeroes to save gas
+- (2) optimize gas after everything
