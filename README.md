@@ -19,6 +19,7 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 
 ### TODO:
 
+- (0) If nothing is on payPlan then transfer all to fee
 - (0) Check which fuzz testing, different variables, can be done in tests. Check if doing invariant. Use ffi to reproduce real payments. 
 - (0) How to get testing code coverage on foundry
 - (0) Think if escrow functions should be external, think if escrow should be updated, i think not
