@@ -16,9 +16,9 @@ contract PlaylistTest is Test {
 
     // Set up date to 03/31/23 for more realistic testing
     uint256 public currentDate = 1_680_220_800;
-    uint64 public plan = 4 * 1e18;
+    uint256 public plan = 4 * 1e18;
     Playlist public playlist;
-    uint24 public tokenAmount = 10000;
+    uint256 public tokenAmount = 10000;
 
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
 
@@ -68,7 +68,7 @@ contract PlaylistTest is Test {
     }
 
     function test_Mint() public {
-        uint24 id = 0;
+        uint256 id = 0;
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(alice, address(0), alice, id, tokenAmount);
         vm.prank(alice);
@@ -78,8 +78,8 @@ contract PlaylistTest is Test {
     }
 
     function test_PayPlan() public {
-        uint8 royaltyLength = 30;
-        uint64 royaltyAmount = plan / royaltyLength * 3 / 4;
+        uint256 royaltyLength = 30;
+        uint256 royaltyAmount = plan / royaltyLength * 3 / 4;
         uint256[] memory ids = new uint256[](30);
         uint256[] memory amounts = new uint256[](30);
         ids[0] = 1;
@@ -144,7 +144,7 @@ contract PlaylistTest is Test {
         amounts[29] = royaltyAmount;
 
         vm.startPrank(alice);
-        for (uint8 i = 0; i < royaltyLength; i++) {
+        for (uint256 i = 0; i < royaltyLength; i++) {
             playlist.mint(i, tokenAmount);
         }
         assertEq(dai.balanceOf(alice), aliceBalance);
@@ -152,7 +152,7 @@ contract PlaylistTest is Test {
         assertEq(playlist.getFeesEarned(), plan * 1 / 4);
         vm.stopPrank();
 
-        for (uint8 i = 0; i < royaltyLength; i++) {
+        for (uint256 i = 0; i < royaltyLength; i++) {
             assertEq(playlist.treasuryOfPlaylist(i, playlist.monthCounter()), royaltyAmount);
         }
         assertEq(dai.balanceOf(alice), aliceBalance - plan);
@@ -203,7 +203,7 @@ contract PlaylistTest is Test {
     }
 
     function test_RevertWhen_Paused() public {
-        uint24 id = 0;
+        uint256 id = 0;
         vm.startPrank(alice);
         playlist.mint(id, tokenAmount);
         playlist.setPaused(true);
