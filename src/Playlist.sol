@@ -12,7 +12,6 @@ import {ERC2981Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/t
 import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "./libraries/TransferHelper.sol";
 import {Escrow} from "./Escrow.sol";
-import "forge-std/console.sol";
 
 contract Playlist is
     ERC1155Upgradeable,
@@ -21,18 +20,13 @@ contract Playlist is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
-    struct Royalty {
-        uint24 id;
-        uint64 amount;
-    }
-
     /// NFT id => monthCounter =>  treasuryOfPlaylist
-    mapping(uint24 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
+    mapping(uint256 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
 
     /// NFT id => Address => _lastMonthIncDeposited
-    mapping(uint24 => mapping(address => uint256)) private _lastMonthIncDeposited;
+    mapping(uint256 => mapping(address => uint256)) private _lastMonthIncDeposited;
     /// NFT id => Address => firstNoDepositedMonth => _balanceOfLastMonth
-    mapping(uint24 => mapping(address => mapping(uint256 => uint256))) private _balanceOfLastMonth;
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) private _balanceOfLastMonth;
 
     address public currency;
     bool public paused;
@@ -43,7 +37,7 @@ contract Playlist is
     Escrow private _escrow;
     uint96 private _feesEarned;
     /// Id of next minted nft
-    uint24 private _nextId;
+    uint256 private _nextId;
     uint256 private _timestamp;
 
     /// @dev Avoid leaving a contract uninitialized => An uninitialized contract can be taken over by an attacker
@@ -68,40 +62,43 @@ contract Playlist is
         _setDefaultRoyalty(super.owner(), 500);
     }
 
-    /// Maximum number of playlists uint24 = 16,777,215;
-    // TODO: frh -> maximum number of playlists
-    function mint(uint24 id, uint24 supply) public {
+    function mint(uint256 id, uint256 supply) public {
         require(id == _nextId, "Wrong id");
         _nextId += 1;
         super._mint(_msgSender(), id, supply, "");
     }
 
-    function payPlan(address from, Royalty[30] calldata royalties) public onlyOwner {
-        uint64 fee = 1 * 1e18;
-        uint64 plan = 4 * 1e18;
-        uint64 maxAmount = 3 * 1e18;
-        uint64 _maxAmount;
+    function payPlan(address from, uint256[] calldata ids, uint256[] calldata amounts) public onlyOwner {
+        require(ids.length == amounts.length, "Array mismatch");
 
-        for (uint256 i = 0; i < royalties.length; i++) {
-            unchecked {
-                _maxAmount += royalties[i].amount;
+        uint96 fee = 1 * 1e18;
+        uint256 plan = 4 * 1e18;
+        uint256 maxAmount = 3 * 1e18;
+        uint256 _maxAmount;
+        unchecked {
+            for (uint256 i = 0; i < amounts.length; i++) {
+                _maxAmount += amounts[i];
             }
         }
         require(_maxAmount <= maxAmount, "MaxAmount");
 
         uint256 timestampDiff = block.timestamp - _timestamp;
         if (timestampDiff >= 30 days) {
-            monthCounter += 1;
+            unchecked {
+                monthCounter += 1;
+            }
             _timestamp = block.timestamp;
         }
 
         unchecked {
             _feesEarned += fee;
         }
-        for (uint256 i = 0; i < royalties.length; i++) {
-            /// Cannot overflow because the sum of all playlist balances can't exceed the max uint256 value.
-            unchecked {
-                treasuryOfPlaylist[royalties[i].id][monthCounter] += royalties[i].amount;
+        uint256 _monthCounter = monthCounter;
+        unchecked {
+            for (uint256 i = 0; i < ids.length; i++) {
+                uint256 id = ids[i];
+                /// Cannot overflow because the sum of all playlist balances can't exceed the max uint256 value.
+                treasuryOfPlaylist[id][_monthCounter] += amounts[i];
             }
         }
         TransferHelper.safeTransferFrom(currency, from, address(this), plan);
@@ -161,38 +158,38 @@ contract Playlist is
         uint256 lastMonth = monthCounter - 1;
 
         /// If mint
-        if (from == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint24 id = uint24(ids[i]);
-                _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
-                _lastMonthIncDeposited[id][to] = lastMonth;
-            }
-        }
-        /// If transfer or sale
-        if (from != address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint24 id = uint24(ids[i]);
+        // if (from == address(0)) {
+        //     for (uint256 i = 0; i < ids.length; ++i) {
+        //         uint24 id = uint24(ids[i]);
+        //         _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
+        //         _lastMonthIncDeposited[id][to] = lastMonth;
+        //     }
+        // }
+        // /// If transfer or sale
+        // if (from != address(0)) {
+        //     for (uint256 i = 0; i < ids.length; ++i) {
+        //         uint24 id = uint24(ids[i]);
 
-                uint256 fromLastMonth = _lastMonthIncDeposited[id][from];
-                bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
+        //         uint256 fromLastMonth = _lastMonthIncDeposited[id][from];
+        //         bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
 
-                if (shouldDeposit) {
-                    uint256 amount = 0;
-                    for (uint256 m = fromLastMonth; m < monthCounter; ++m) {
-                        amount +=
-                            treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
-                    }
-                    _balanceOfLastMonth[id][from][fromLastMonth] = 0;
-                    _escrow.deposit(amount, from);
-                } else {
-                    _balanceOfLastMonth[id][from][lastMonth] = 0;
-                }
-                delete _lastMonthIncDeposited[id][from];
+        //         if (shouldDeposit) {
+        //             uint256 amount = 0;
+        //             for (uint256 m = fromLastMonth; m < monthCounter; ++m) {
+        //                 amount +=
+        //                     treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
+        //             }
+        //             _balanceOfLastMonth[id][from][fromLastMonth] = 0;
+        //             _escrow.deposit(amount, from);
+        //         } else {
+        //             _balanceOfLastMonth[id][from][lastMonth] = 0;
+        //         }
+        //         delete _lastMonthIncDeposited[id][from];
 
-                /// After all the calculations set the info of receiver (to)
-                _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
-                _lastMonthIncDeposited[id][to] = lastMonth;
-            }
-        }
+        //         /// After all the calculations set the info of receiver (to)
+        //         _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
+        //         _lastMonthIncDeposited[id][to] = lastMonth;
+        //     }
+        // }
     }
 }
