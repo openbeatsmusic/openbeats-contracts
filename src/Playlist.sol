@@ -27,16 +27,16 @@ contract Playlist is
     }
 
     /// NFT id => monthCounter =>  treasuryOfPlaylist
-    mapping(uint24 => mapping(uint24 => uint256)) public treasuryOfPlaylist;
+    mapping(uint24 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
 
     /// NFT id => Address => _lastMonthIncDeposited
-    mapping(uint24 => mapping(address => uint24)) private _lastMonthIncDeposited;
+    mapping(uint24 => mapping(address => uint256)) private _lastMonthIncDeposited;
     /// NFT id => Address => firstNoDepositedMonth => _balanceOfLastMonth
-    mapping(uint24 => mapping(address => mapping(uint24 => uint256))) private _balanceOfLastMonth;
+    mapping(uint24 => mapping(address => mapping(uint256 => uint256))) private _balanceOfLastMonth;
 
     address public currency;
     bool public paused;
-    uint24 public monthCounter;
+    uint256 public monthCounter;
     bytes32 public immutable name = "OpenBeats";
     bytes32 public immutable symbol = "OB";
 
@@ -69,6 +69,7 @@ contract Playlist is
     }
 
     /// Maximum number of playlists uint24 = 16,777,215;
+    // TODO: frh -> maximum number of playlists
     function mint(uint24 id, uint24 supply) public {
         require(id == _nextId, "Wrong id");
         _nextId += 1;
@@ -81,7 +82,7 @@ contract Playlist is
         uint64 maxAmount = 3 * 1e18;
         uint64 _maxAmount;
 
-        for (uint8 i = 0; i < royalties.length; i++) {
+        for (uint256 i = 0; i < royalties.length; i++) {
             unchecked {
                 _maxAmount += royalties[i].amount;
             }
@@ -97,7 +98,7 @@ contract Playlist is
         unchecked {
             _feesEarned += fee;
         }
-        for (uint8 i = 0; i < royalties.length; i++) {
+        for (uint256 i = 0; i < royalties.length; i++) {
             /// Cannot overflow because the sum of all playlist balances can't exceed the max uint256 value.
             unchecked {
                 treasuryOfPlaylist[royalties[i].id][monthCounter] += royalties[i].amount;
@@ -157,7 +158,7 @@ contract Playlist is
         require(!paused, "Token transfers paused");
         ERC1155SupplyUpgradeable._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         /// Last month for calculations, since fees are still flowing on monthCounter
-        uint24 lastMonth = monthCounter - 1;
+        uint256 lastMonth = monthCounter - 1;
 
         /// If mint
         if (from == address(0)) {
@@ -172,12 +173,12 @@ contract Playlist is
             for (uint256 i = 0; i < ids.length; ++i) {
                 uint24 id = uint24(ids[i]);
 
-                uint24 fromLastMonth = _lastMonthIncDeposited[id][from];
+                uint256 fromLastMonth = _lastMonthIncDeposited[id][from];
                 bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
 
                 if (shouldDeposit) {
                     uint256 amount = 0;
-                    for (uint24 m = fromLastMonth; m < monthCounter; ++m) {
+                    for (uint256 m = fromLastMonth; m < monthCounter; ++m) {
                         amount +=
                             treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
                     }
