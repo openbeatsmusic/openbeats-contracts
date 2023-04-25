@@ -3,6 +3,7 @@ pragma solidity =0.8.18;
 
 import "forge-std/Test.sol";
 import "src/Playlist.sol";
+import "src/PlaylistProxy.sol";
 import "./utils/SigUtils.sol";
 import "src/tokens/MockDAI.sol";
 
@@ -28,8 +29,7 @@ contract PlaylistTest is Test {
         /// We get alice private keys to be able to sign, alice = (private keys [0] of anvil)
         alicePrivateKey = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
         alice = vm.addr(alicePrivateKey);
-        vm.prank(alice);
-        playlist = new Playlist(address(dai));
+        setUpProxy();
 
         setUpPermit();
         deal(address(dai), alice, aliceBalance);
@@ -50,6 +50,21 @@ contract PlaylistTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         dai.permit(permit.holder, permit.spender, permit.nonce, permit.expiry, permit.allowed, v, r, s);
+    }
+
+    function setUpProxy() public {
+        vm.startPrank(alice);
+        address implementation = address(new Playlist());
+        address playlistProxy = address(new PlaylistProxy(implementation, ""));
+        playlist = Playlist(playlistProxy);
+        playlist.initialize(address(dai));
+        vm.stopPrank();
+    }
+
+    function test_Init() public {
+        assertEq(playlist.getInitializedVersion(), 1);
+        assertEq(playlist.name(), "OpenBeats");
+        assertEq(playlist.symbol(), "OB");
     }
 
     function test_Mint() public {
@@ -147,6 +162,11 @@ contract PlaylistTest is Test {
         vm.stopPrank();
     }
 
+    function test_RevertWhen_InitializeAgain() public {
+        vm.expectRevert("Initializable: contract is already initialized");
+        playlist.initialize(address(dai));
+    }
+
     function test_RevertWhen_Paused() public {
         uint24 id = 0;
         vm.startPrank(alice);
@@ -164,6 +184,14 @@ contract PlaylistTest is Test {
         vm.expectRevert("Cannot renounce ownership");
         playlist.renounceOwnership();
         assertEq(playlist.owner(), alice);
+    }
+
+    function test_RevertWhen_UpgradeNotApproved() public {
+        vm.startPrank(address(2));
+        address newImplementation = address(new Playlist());
+        vm.expectRevert("Ownable: caller is not the owner");
+        playlist.upgradeTo(newImplementation);
+        vm.stopPrank();
     }
 
     function test_RoyaltyInfo() public {
@@ -259,10 +287,39 @@ contract PlaylistTest is Test {
         assertEq(playlist.depositsOf(address(5)), 0);
     }
 
-    function test_SupportsInterface() public {
+    function test_EIP165() public {
         bytes4 interfaceIdERC1155 = 0xd9b67a26;
         bytes4 interfaceIdERC2981 = 0x2a55205a;
         assertEq(playlist.supportsInterface(interfaceIdERC1155), true);
         assertEq(playlist.supportsInterface(interfaceIdERC2981), true);
+    }
+
+    function test_UpgradeApproved() public {
+        vm.startPrank(alice);
+        address newImplementation = address(new Playlist());
+        playlist.upgradeTo(newImplementation);
+        assertEq(playlist.name(), "OpenBeats");
+        assertEq(playlist.symbol(), "OB");
+        vm.stopPrank();
+        // If new state, should be done with:
+        // playlist.reinitialize(address(2));
+        // assertEq(playlist.getInitializedVersion(), 2);
+        // When reinitializing contract a reinitialize function should be implemented, which would like:
+        // /// @dev Initialize sets first version of the contract, later versions should use reinitializer
+        // /// @dev Royalties are sent to owner of the contract
+        // function reinitialize(address currency_) external reinitializer(2) {
+        //     currency = currency_;
+        //     monthCounter = 1;
+        //     paused = false;
+        //     _escrow = new Escrow(currency_);
+        //     _nextId = 0;
+        //     _timestamp = block.timestamp;
+        //     __ERC1155_init("https://api.openbeats.xyz/openbeats/v1/playlist/metadata/{id}");
+        //     __ERC1155Supply_init();
+        //     __ERC2981_init();
+        //     __Ownable_init();
+        //     __UUPSUpgradeable_init();
+        //     _setDefaultRoyalty(super.owner(), 500);
+        // }
     }
 }

@@ -2,15 +2,25 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity =0.8.18;
 
-import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
-import {ERC1155Supply} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ERC1155Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/ERC1155Upgradeable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {ERC1155SupplyUpgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
+import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 /// No need to resetRoyalty in burn since playlist has no burn implemented
-import {ERC2981} from "openzeppelin-contracts/contracts/token/common/ERC2981.sol";
+import {ERC2981Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/common/ERC2981Upgradeable.sol";
+import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "./libraries/TransferHelper.sol";
 import {Escrow} from "./Escrow.sol";
+import "forge-std/console.sol";
 
-contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
+contract Playlist is
+    ERC1155Upgradeable,
+    ERC1155SupplyUpgradeable,
+    ERC2981Upgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     struct Royalty {
         uint24 id;
         uint64 amount;
@@ -25,29 +35,37 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
     mapping(uint24 => mapping(address => mapping(uint24 => uint256))) private _balanceOfLastMonth;
 
     address public currency;
-    bool public paused = false;
-    uint64 public fee = 1 * 1e18;
-    uint24 public monthCounter = 1;
-    string public name = "OpenBeats";
-    uint64 public plan = 4 * 1e18;
-    string public symbol = "OB";
+    bool public paused;
+    uint24 public monthCounter;
+    bytes32 public immutable name = "OpenBeats";
+    bytes32 public immutable symbol = "OB";
 
-    Escrow private immutable _escrow;
+    Escrow private _escrow;
     uint96 private _feesEarned;
-    /// Maximum royalties paid per month
-    uint64 private _maxAmount = 3 * 1e18;
     /// Id of next minted nft
-    uint24 private _nextId = 0;
-    /// Set royalty to 5%
-    uint16 private _royalty = 5;
+    uint24 private _nextId;
     uint256 private _timestamp;
 
-    /// Royalties are sent to owner of the contract
-    constructor(address currency_) ERC1155("https://api.openbeats.xyz/openbeats/v1/playlist/metadata/{id}") {
-        _escrow = new Escrow(currency_);
+    /// @dev Avoid leaving a contract uninitialized => An uninitialized contract can be taken over by an attacker
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @dev Initialize sets first version of the contract, later versions should use reinitializer
+    /// @dev Royalties are sent to owner of the contract, 5% royalties set
+    function initialize(address currency_) external initializer {
         currency = currency_;
-        _setDefaultRoyalty(super.owner(), _royalty * 100);
+        monthCounter = 1;
+        paused = false;
+        _escrow = new Escrow(currency_);
+        _nextId = 0;
         _timestamp = block.timestamp;
+        __ERC1155_init("https://api.openbeats.xyz/openbeats/v1/playlist/metadata/{id}");
+        __ERC1155Supply_init();
+        __ERC2981_init();
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+        _setDefaultRoyalty(super.owner(), 500);
     }
 
     /// Maximum number of playlists uint24 = 16,777,215;
@@ -58,14 +76,17 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
     }
 
     function payPlan(address from, Royalty[30] calldata royalties) public onlyOwner {
-        uint64 maxAmount;
+        uint64 fee = 1 * 1e18;
+        uint64 plan = 4 * 1e18;
+        uint64 maxAmount = 3 * 1e18;
+        uint64 _maxAmount;
 
         for (uint8 i = 0; i < royalties.length; i++) {
             unchecked {
-                maxAmount += royalties[i].amount;
+                _maxAmount += royalties[i].amount;
             }
         }
-        require(maxAmount <= _maxAmount, "MaxAmount");
+        require(_maxAmount <= maxAmount, "MaxAmount");
 
         uint256 timestampDiff = block.timestamp - _timestamp;
         if (timestampDiff >= 30 days) {
@@ -100,15 +121,30 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         return _feesEarned;
     }
 
+    /// @dev Returns the highest version that has been initialized. See {reinitializer}.
+    function getInitializedVersion() public view returns (uint8) {
+        return Initializable._getInitializedVersion();
+    }
+
     /// @dev Override and disable this function
     function renounceOwnership() public view override onlyOwner {
         revert("Cannot renounce ownership");
     }
 
     /// @dev See {IERC165-supportsInterface}.
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC1155Upgradeable, ERC2981Upgradeable)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
+
+    /// @dev Function to determine who is allowed to upgrade this contract.
+    /// @param _newImplementation: unused in access check
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}
 
     function _beforeTokenTransfer(
         address operator,
@@ -117,9 +153,9 @@ contract Playlist is ERC1155, ERC1155Supply, ERC2981, Ownable {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) internal override(ERC1155, ERC1155Supply) {
+    ) internal override(ERC1155Upgradeable, ERC1155SupplyUpgradeable) {
         require(!paused, "Token transfers paused");
-        ERC1155Supply._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        ERC1155SupplyUpgradeable._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         /// Last month for calculations, since fees are still flowing on monthCounter
         uint24 lastMonth = monthCounter - 1;
 

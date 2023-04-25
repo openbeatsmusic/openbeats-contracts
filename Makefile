@@ -2,7 +2,7 @@
 
 .PHONY: source .env
 
-install :; forge install foundry-rs/forge-std --no-commit && forge install transmissions11/solmate --no-commit && forge install openzeppelin/openzeppelin-contracts --no-commit && forge remappings > remappings.txt
+install :; forge install foundry-rs/forge-std --no-commit && forge install transmissions11/solmate --no-commit && forge install openzeppelin/openzeppelin-contracts --no-commit && forge install https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit && forge remappings > remappings.txt
 
 # This is the first private key of account from from the "make anvil" command
 # Example on how to run this command: "make deploy-anvil contract=MockDAI", remember to first run "make anvil"

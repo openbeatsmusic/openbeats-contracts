@@ -16,6 +16,8 @@ import "./libraries/TransferHelper.sol";
  * transfers in the inheritance tree. The contract that uses the escrow as its
  * payment method should be its owner, and provide public methods redirecting
  * to the escrow's deposit and withdraw.
+ *
+ * In this case the owner is the ProxyContract, not the implementation.
  */
 contract Escrow is Ownable {
     address private _currency;

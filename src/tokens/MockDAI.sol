@@ -6,6 +6,7 @@
  * Submitted for verification at polygonscan.com on 2021-06-15
  */
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 // File: @openzeppelin/contracts/GSN/Context.sol
 
@@ -684,21 +685,6 @@ pragma solidity =0.8.18;
 interface IChildToken {
     function deposit(address user, bytes calldata depositData) external;
 }
-
-// File: contracts/common/Initializable.sol
-
-pragma solidity =0.8.18;
-
-contract Initializable {
-    bool inited = false;
-
-    modifier initializer() {
-        require(!inited, "already inited");
-        _;
-        inited = true;
-    }
-}
-
 // File: contracts/common/EIP712Base.sol
 
 pragma solidity =0.8.18;
