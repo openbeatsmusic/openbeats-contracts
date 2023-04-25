@@ -246,92 +246,95 @@ contract PlaylistTest is Test {
         assertEq(_royaltyAmount, 5);
     }
 
-    // function test__SafeBatchTransferFrom() public {
-    //     uint24 id0 = 0;
-    //     uint24 id1 = 1;
-    //     uint256 amount0 = 3333;
-    //     uint256 amount1 = 2856;
-    //     uint256[] memory ids = new uint256[](2);
-    //     uint256[] memory amounts = new uint256[](2);
-    //     ids[0] = id0;
-    //     ids[1] = id1;
-    //     amounts[0] = amount0;
-    //     amounts[1] = amount1;
-    //     Playlist.Royalty[30] memory royalties0;
-    //     royalties0[0] = Playlist.Royalty(id0, plan * 3 / 4);
-    //     Playlist.Royalty[30] memory royalties1;
-    //     royalties1[0] = Playlist.Royalty(id1, plan * 3 / 4);
+    function test__SafeBatchTransferFrom() public {
+        uint256 id0 = 0;
+        uint256 id1 = 1;
+        uint256 transferAmount0 = 3333;
+        uint256 transferAmount1 = 2856;
+        uint256[] memory ids = new uint256[](2);
+        uint256[] memory amounts = new uint256[](2);
+        uint256[] memory transferAmounts = new uint256[](2);
+        ids[0] = id0;
+        ids[1] = id1;
+        amounts[0] = plan * 3 / 4 / 2;
+        amounts[1] = plan * 3 / 4 / 2;
+        transferAmounts[0] = transferAmount0;
+        transferAmounts[1] = transferAmount1;
 
-    //     vm.startPrank(alice);
-    //     playlist.mint(id0, tokenAmount);
-    //     playlist.mint(id1, tokenAmount);
+        vm.startPrank(alice);
+        playlist.mint(id0, tokenAmount);
+        playlist.mint(id1, tokenAmount);
 
-    //     for (uint8 i = 0; i < 3; i++) {
-    //         playlist.payPlan(alice, royalties0);
-    //         playlist.payPlan(alice, royalties1);
-    //         skip(30 days);
-    //     }
-    //     playlist.safeBatchTransferFrom(alice, address(3), ids, amounts, "");
-    //     assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 4);
+        for (uint256 i = 0; i < 3; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+        playlist.safeBatchTransferFrom(alice, address(3), ids, transferAmounts, "");
+        assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 4);
 
-    //     skip(5 days);
+        skip(5 days);
 
-    //     for (uint8 i = 0; i < 3; i++) {
-    //         playlist.payPlan(alice, royalties0);
-    //         playlist.payPlan(alice, royalties1);
-    //         skip(30 days);
-    //     }
-    //     vm.stopPrank();
-    //     vm.prank(address(3));
-    //     playlist.safeBatchTransferFrom(address(3), alice, ids, amounts, "");
-    //     assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 4 * (amount0 + amount1) / tokenAmount);
+        for (uint256 i = 0; i < 3; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+        vm.stopPrank();
+        vm.prank(address(3));
+        playlist.safeBatchTransferFrom(address(3), alice, ids, transferAmounts, "");
+        assertEq(
+            playlist.depositsOf(address(address(3))),
+            plan * 3 / 4 * 4 * (transferAmount0 + transferAmount1) / tokenAmount
+        );
 
-    //     vm.prank(alice);
-    //     playlist.safeBatchTransferFrom(alice, address(4), ids, amounts, "");
-    //     assertEq(playlist.depositsOf(address(4)), 0);
+        vm.prank(alice);
+        playlist.safeBatchTransferFrom(alice, address(4), ids, transferAmounts, "");
+        assertEq(playlist.depositsOf(address(4)), 0);
 
-    //     vm.prank(address(4));
-    //     playlist.safeBatchTransferFrom(address(4), address(5), ids, amounts, "");
-    //     assertEq(playlist.depositsOf(address(4)), 0);
-    //     assertEq(playlist.depositsOf(address(5)), 0);
-    // }
+        vm.prank(address(4));
+        playlist.safeBatchTransferFrom(address(4), address(5), ids, transferAmounts, "");
+        assertEq(playlist.depositsOf(address(4)), 0);
+        assertEq(playlist.depositsOf(address(5)), 0);
+    }
 
-    // function test__SafeTransferFrom() public {
-    //     uint24 id = 0;
-    //     uint256 amount = 3333;
-    //     Playlist.Royalty[30] memory royalties;
-    //     royalties[0] = Playlist.Royalty(id, plan * 3 / 4);
+    function test__SafeTransferFrom() public {
+        uint256 transferAmount = 3333;
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        ids[0] = 0;
+        amounts[0] = plan / 4 * 3;
 
-    //     vm.startPrank(alice);
-    //     playlist.mint(id, tokenAmount);
+        vm.startPrank(alice);
+        playlist.mint(ids[0], tokenAmount);
 
-    //     for (uint8 i = 0; i < 3; i++) {
-    //         playlist.payPlan(alice, royalties);
-    //         skip(30 days);
-    //     }
-    //     playlist.safeTransferFrom(alice, address(3), id, amount, "");
-    //     assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 2);
+        for (uint256 i = 0; i < 3; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+        playlist.safeTransferFrom(alice, address(3), ids[0], transferAmount, "");
+        assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 2);
 
-    //     skip(5 days);
+        skip(5 days);
 
-    //     for (uint8 i = 0; i < 3; i++) {
-    //         playlist.payPlan(alice, royalties);
-    //         skip(30 days);
-    //     }
-    //     vm.stopPrank();
-    //     vm.prank(address(3));
-    //     playlist.safeTransferFrom(address(3), alice, id, amount, "");
-    //     assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 4 * amount / tokenAmount);
+        for (uint256 i = 0; i < 3; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+        vm.stopPrank();
+        vm.prank(address(3));
+        playlist.safeTransferFrom(address(3), alice, ids[0], transferAmount, "");
+        assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 4 * transferAmount / tokenAmount);
 
-    //     vm.prank(alice);
-    //     playlist.safeTransferFrom(alice, address(4), id, amount, "");
-    //     assertEq(playlist.depositsOf(address(4)), 0);
+        vm.prank(alice);
+        playlist.safeTransferFrom(alice, address(4), ids[0], transferAmount, "");
+        assertEq(playlist.depositsOf(address(4)), 0);
 
-    //     vm.prank(address(4));
-    //     playlist.safeTransferFrom(address(4), address(5), id, amount, "");
-    //     assertEq(playlist.depositsOf(address(4)), 0);
-    //     assertEq(playlist.depositsOf(address(5)), 0);
-    // }
+        vm.prank(address(4));
+        playlist.safeTransferFrom(address(4), address(5), ids[0], transferAmount, "");
+        assertEq(playlist.depositsOf(address(4)), 0);
+        assertEq(playlist.depositsOf(address(5)), 0);
+    }
 
     function test_EIP165() public {
         bytes4 interfaceIdERC1155 = 0xd9b67a26;

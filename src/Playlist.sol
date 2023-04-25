@@ -158,38 +158,38 @@ contract Playlist is
         uint256 lastMonth = monthCounter - 1;
 
         /// If mint
-        // if (from == address(0)) {
-        //     for (uint256 i = 0; i < ids.length; ++i) {
-        //         uint24 id = uint24(ids[i]);
-        //         _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
-        //         _lastMonthIncDeposited[id][to] = lastMonth;
-        //     }
-        // }
-        // /// If transfer or sale
-        // if (from != address(0)) {
-        //     for (uint256 i = 0; i < ids.length; ++i) {
-        //         uint24 id = uint24(ids[i]);
+        if (from == address(0)) {
+            for (uint256 i = 0; i < ids.length; ++i) {
+                uint256 id = ids[i];
+                _balanceOfLastMonth[id][to][lastMonth] = amounts[i];
+                _lastMonthIncDeposited[id][to] = lastMonth;
+            }
+        }
+        /// If transfer or sale
+        if (from != address(0)) {
+            for (uint256 i = 0; i < ids.length; ++i) {
+                uint256 id = ids[i];
 
-        //         uint256 fromLastMonth = _lastMonthIncDeposited[id][from];
-        //         bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
+                uint256 fromLastMonth = _lastMonthIncDeposited[id][from];
+                bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
 
-        //         if (shouldDeposit) {
-        //             uint256 amount = 0;
-        //             for (uint256 m = fromLastMonth; m < monthCounter; ++m) {
-        //                 amount +=
-        //                     treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
-        //             }
-        //             _balanceOfLastMonth[id][from][fromLastMonth] = 0;
-        //             _escrow.deposit(amount, from);
-        //         } else {
-        //             _balanceOfLastMonth[id][from][lastMonth] = 0;
-        //         }
-        //         delete _lastMonthIncDeposited[id][from];
+                if (shouldDeposit) {
+                    uint256 amount = 0;
+                    for (uint256 m = fromLastMonth; m < monthCounter; ++m) {
+                        amount +=
+                            treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
+                    }
+                    _balanceOfLastMonth[id][from][fromLastMonth] = 0;
+                    _escrow.deposit(amount, from);
+                } else {
+                    _balanceOfLastMonth[id][from][lastMonth] = 0;
+                }
+                delete _lastMonthIncDeposited[id][from];
 
-        //         /// After all the calculations set the info of receiver (to)
-        //         _balanceOfLastMonth[id][to][lastMonth] = uint24(amounts[i]);
-        //         _lastMonthIncDeposited[id][to] = lastMonth;
-        //     }
-        // }
+                /// After all the calculations set the info of receiver (to)
+                _balanceOfLastMonth[id][to][lastMonth] = amounts[i];
+                _lastMonthIncDeposited[id][to] = lastMonth;
+            }
+        }
     }
 }
