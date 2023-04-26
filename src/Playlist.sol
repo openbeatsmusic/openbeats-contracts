@@ -68,6 +68,25 @@ contract Playlist is
         super._mint(_msgSender(), id, supply, "");
     }
 
+    function payFirstPlan(address from) public onlyOwner {
+        uint96 fee = 4 * 1e18;
+        uint256 plan = 4 * 1e18;
+
+        uint256 timestampDiff = block.timestamp - _timestamp;
+        if (timestampDiff >= 30 days) {
+            unchecked {
+                monthCounter += 1;
+            }
+            _timestamp = block.timestamp;
+        }
+
+        unchecked {
+            _feesEarned += fee;
+        }
+
+        TransferHelper.safeTransferFrom(currency, from, address(this), plan);
+    }
+
     function payPlan(address from, uint256[] calldata ids, uint256[] calldata amounts) public onlyOwner {
         require(ids.length == amounts.length, "Array mismatch");
         require(ids.length <= 30, "Exceeded length");

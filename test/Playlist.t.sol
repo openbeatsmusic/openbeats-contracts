@@ -77,6 +77,13 @@ contract PlaylistTest is Test {
         assertEq(playlist.depositsOf(alice), 0);
     }
 
+    function test_PayFirstPlan() public {
+        vm.startPrank(alice);
+        playlist.payFirstPlan(alice);
+        assertEq(playlist.getFeesEarned(), plan);
+        vm.stopPrank();
+    }
+
     function test_PayPlan() public {
         uint256 royaltyLength = 30;
         uint256 royaltyAmount = plan / royaltyLength * 3 / 4;
