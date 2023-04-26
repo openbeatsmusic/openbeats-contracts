@@ -225,6 +225,78 @@ contract PlaylistTest is Test {
         playlist.payPlan(alice, ids, amounts);
     }
 
+    function test_RevertWhen_PayPlanExceededLength() public {
+        uint256 royaltyLength = 31;
+        uint256 royaltyAmount = plan / royaltyLength * 3 / 4;
+        uint256[] memory ids = new uint256[](31);
+        uint256[] memory amounts = new uint256[](31);
+        ids[0] = 1;
+        ids[1] = 0;
+        ids[2] = 2;
+        ids[3] = 3;
+        ids[4] = 4;
+        ids[5] = 5;
+        ids[6] = 6;
+        ids[7] = 7;
+        ids[8] = 8;
+        ids[9] = 9;
+        ids[10] = 10;
+        ids[11] = 11;
+        ids[12] = 12;
+        ids[13] = 13;
+        ids[14] = 14;
+        ids[15] = 15;
+        ids[16] = 16;
+        ids[17] = 17;
+        ids[18] = 18;
+        ids[19] = 19;
+        ids[20] = 20;
+        ids[21] = 21;
+        ids[22] = 22;
+        ids[23] = 23;
+        ids[24] = 24;
+        ids[25] = 25;
+        ids[26] = 26;
+        ids[27] = 27;
+        ids[28] = 28;
+        ids[29] = 29;
+        ids[30] = 30;
+        amounts[0] = royaltyAmount;
+        amounts[1] = royaltyAmount;
+        amounts[2] = royaltyAmount;
+        amounts[3] = royaltyAmount;
+        amounts[4] = royaltyAmount;
+        amounts[5] = royaltyAmount;
+        amounts[6] = royaltyAmount;
+        amounts[7] = royaltyAmount;
+        amounts[8] = royaltyAmount;
+        amounts[9] = royaltyAmount;
+        amounts[10] = royaltyAmount;
+        amounts[11] = royaltyAmount;
+        amounts[12] = royaltyAmount;
+        amounts[13] = royaltyAmount;
+        amounts[14] = royaltyAmount;
+        amounts[15] = royaltyAmount;
+        amounts[16] = royaltyAmount;
+        amounts[17] = royaltyAmount;
+        amounts[18] = royaltyAmount;
+        amounts[19] = royaltyAmount;
+        amounts[20] = royaltyAmount;
+        amounts[21] = royaltyAmount;
+        amounts[22] = royaltyAmount;
+        amounts[23] = royaltyAmount;
+        amounts[24] = royaltyAmount;
+        amounts[25] = royaltyAmount;
+        amounts[26] = royaltyAmount;
+        amounts[27] = royaltyAmount;
+        amounts[28] = royaltyAmount;
+        amounts[29] = royaltyAmount;
+        amounts[30] = royaltyAmount;
+        vm.prank(alice);
+        vm.expectRevert("Exceeded length");
+        playlist.payPlan(alice, ids, amounts);
+    }
+
     function test_RevertWhen_RenounceOwnership() public {
         vm.prank(alice);
         vm.expectRevert("Cannot renounce ownership");

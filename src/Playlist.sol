@@ -70,6 +70,7 @@ contract Playlist is
 
     function payPlan(address from, uint256[] calldata ids, uint256[] calldata amounts) public onlyOwner {
         require(ids.length == amounts.length, "Array mismatch");
+        require(ids.length <= 30, "Exceeded length");
 
         uint96 fee = 1 * 1e18;
         uint256 plan = 4 * 1e18;
