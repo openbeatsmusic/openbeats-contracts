@@ -124,6 +124,12 @@ contract Playlist is
         TransferHelper.safeTransferFrom(currency, from, address(this), plan);
     }
 
+    function withdraw(address payee) public {
+        // TODO: frh -> try msgSender
+        require(msg.sender == payee, "Not payee");
+        _escrow.withdraw(payee);
+    }
+
     /// @dev Pauses the contract transfers, sales and mints
     function setPaused(bool _paused) public onlyOwner {
         paused = _paused;

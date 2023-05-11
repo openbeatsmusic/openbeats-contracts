@@ -179,6 +179,28 @@ contract PlaylistTest is Test {
         vm.stopPrank();
     }
 
+    function test_Withdraw() public {
+        uint256 royaltyLength = 1;
+        uint256 royaltyAmount = plan * 3 / 4;
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        ids[0] = 0;
+        amounts[0] = royaltyAmount;
+
+        vm.startPrank(alice);
+        playlist.mint(0, tokenAmount);
+        assertEq(dai.balanceOf(alice), aliceBalance);
+        playlist.payPlan(alice, ids, amounts);
+
+        playlist.withdraw(alice);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < royaltyLength; i++) {
+            assertEq(playlist.treasuryOfPlaylist(i, playlist.monthCounter()), royaltyAmount);
+        }
+        assertEq(dai.balanceOf(alice), aliceBalance - plan);
+    }
+
     function test_RevertWhen_AmountExceedPlan() public {
         uint256[] memory ids = new uint256[](1);
         uint256[] memory amounts = new uint256[](1);
