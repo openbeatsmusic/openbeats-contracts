@@ -23,10 +23,13 @@ contract Playlist is
     /// NFT id => monthCounter =>  treasuryOfPlaylist
     mapping(uint256 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
 
+    /// _lastMonthIncDeposited refers to the last month in which the account deposited earnings
     /// NFT id => Address => _lastMonthIncDeposited
     mapping(uint256 => mapping(address => uint256)) private _lastMonthIncDeposited;
-    /// NFT id => Address => firstNoDepositedMonth => _balanceOfLastMonth
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) private _balanceOfLastMonth;
+
+    /// Balance of month refers to the token balance that the account had that month
+    /// NFT id => Address => firstNoDepositedMonth => _balanceOfMonth
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) private _balanceOfMonth;
 
     address public currency;
     bool public paused;
@@ -49,7 +52,8 @@ contract Playlist is
     /// @dev Royalties are sent to owner of the contract, 5% royalties set
     function initialize(address currency_) external initializer {
         currency = currency_;
-        monthCounter = 1;
+        /// MonthCounter should always be >= 2
+        monthCounter = 2;
         paused = false;
         _escrow = new Escrow(currency_);
         _nextId = 0;
@@ -62,6 +66,13 @@ contract Playlist is
         _setDefaultRoyalty(super.owner(), 500);
     }
 
+    function depositEarnings(uint256[] calldata ids) public {
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id = ids[i];
+            _depositEarnings(_msgSender(), id);
+        }
+    }
+
     function mint(uint256 id, uint256 supply) public {
         require(id == _nextId, "Wrong id");
         _nextId += 1;
@@ -69,6 +80,7 @@ contract Playlist is
     }
 
     function payFirstPlan(address from) public onlyOwner {
+        require(!paused, "Contract paused");
         uint96 fee = 4 * 1e18;
         uint256 plan = 4 * 1e18;
 
@@ -88,6 +100,7 @@ contract Playlist is
     }
 
     function payPlan(address from, uint256[] calldata ids, uint256[] calldata amounts) public onlyOwner {
+        require(!paused, "Contract paused");
         require(ids.length == amounts.length, "Array mismatch");
         require(ids.length <= 30, "Exceeded length");
 
@@ -125,12 +138,12 @@ contract Playlist is
     }
 
     function withdraw(address payee) public {
-        // TODO: frh -> try msgSender
-        require(msg.sender == payee, "Not payee");
+        require(!paused, "Contract paused");
+        require(_msgSender() == payee, "Not payee");
         _escrow.withdraw(payee);
     }
 
-    /// @dev Pauses the contract transfers, sales and mints
+    /// @dev Pauses the contract transfers and mints
     function setPaused(bool _paused) public onlyOwner {
         paused = _paused;
     }
@@ -178,44 +191,65 @@ contract Playlist is
         uint256[] memory amounts,
         bytes memory data
     ) internal override(ERC1155Upgradeable, ERC1155SupplyUpgradeable) {
-        require(!paused, "Token transfers paused");
+        /// Contract paused for mints and transfers
+        require(!paused, "Contract paused");
         ERC1155SupplyUpgradeable._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
         /// Last month for calculations, since fees are still flowing on monthCounter
         uint256 lastMonth = monthCounter - 1;
 
-        /// If mint
-        if (from == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint256 id = ids[i];
-                _balanceOfLastMonth[id][to][lastMonth] = amounts[i];
-                _lastMonthIncDeposited[id][to] = lastMonth;
-            }
-        }
-        /// If transfer or sale
-        if (from != address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint256 id = ids[i];
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id = ids[i];
 
-                uint256 fromLastMonth = _lastMonthIncDeposited[id][from];
-                bool shouldDeposit = (monthCounter - fromLastMonth) > 1 ? true : false;
+            /// If transfer
+            if (from != address(0)) {
+                _depositEarnings(from, id);
 
-                if (shouldDeposit) {
-                    uint256 amount = 0;
-                    for (uint256 m = fromLastMonth; m < monthCounter; ++m) {
-                        amount +=
-                            treasuryOfPlaylist[id][m] * _balanceOfLastMonth[id][from][fromLastMonth] / totalSupply(id);
-                    }
-                    _balanceOfLastMonth[id][from][fromLastMonth] = 0;
-                    _escrow.deposit(amount, from);
-                } else {
-                    _balanceOfLastMonth[id][from][lastMonth] = 0;
-                }
+                /// We delete this mapping and set _balanceOfMonth as 0 so _balanceOfMonth can never be accessed after
+                /// the transfer since it needs _lastMonthIncDeposited to be accessed
                 delete _lastMonthIncDeposited[id][from];
-
-                /// After all the calculations set the info of receiver (to)
-                _balanceOfLastMonth[id][to][lastMonth] = amounts[i];
-                _lastMonthIncDeposited[id][to] = lastMonth;
+                delete _balanceOfMonth[id][from][lastMonth];
             }
+
+            /// After all the calculations set the info of receiver (to). Could be a mint or transfer.
+            _balanceOfMonth[id][to][lastMonth] = amounts[i];
+            _lastMonthIncDeposited[id][to] = lastMonth;
         }
+    }
+
+    function _depositEarnings(address account, uint256 id) private {
+        require(!paused, "Contract paused");
+        /// Last month for calculations, since fees are still flowing on monthCounter
+        uint256 lastMonth = monthCounter - 1;
+        uint256 earnings = earningsOf(account, id);
+        uint256 lastMonthIncDeposited = _lastMonthIncDeposited[id][account];
+
+        if (earnings > 0) {
+            /// Setting lastMonthIncDeposited if deposit is called. No reentrancy here since with current monthCounter
+            /// not possible to get earnings, this will be deleted if transfer
+            _balanceOfMonth[id][account][lastMonth] = _balanceOfMonth[id][account][lastMonthIncDeposited];
+            delete _balanceOfMonth[id][account][lastMonthIncDeposited];
+            /// Set last month of deposit, this would be deleted afterwards if it comes from a transferFrom so no gas
+            /// penalization
+            _lastMonthIncDeposited[id][account] = monthCounter - 1;
+            _escrow.deposit(earnings, account);
+        }
+    }
+
+    /// Earnings since last deposit of earnings
+    function earningsOf(address account, uint256 id) public view returns (uint256) {
+        uint256 lastMonthIncDeposited = _lastMonthIncDeposited[id][account];
+        uint256 newMonthNoDeposit = lastMonthIncDeposited + 1;
+        bool shouldDeposit = (monthCounter - lastMonthIncDeposited) > 1 ? true : false;
+        /// If nothing is found then _lastMonthIncDeposited[id][account] is 0
+        if (lastMonthIncDeposited == 0 || !shouldDeposit) {
+            return 0;
+        }
+        uint256 earnings = 0;
+        for (uint256 m = newMonthNoDeposit; m < monthCounter; ++m) {
+            earnings +=
+                treasuryOfPlaylist[id][m] * _balanceOfMonth[id][account][lastMonthIncDeposited] / totalSupply(id);
+        }
+        return earnings;
     }
 }

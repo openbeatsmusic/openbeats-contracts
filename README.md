@@ -19,8 +19,10 @@ Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe
 
 ### TODO:
 
-- (0) Forge coverage and comment functions. Check which fuzz testing, different variables, can be done in tests. Check if doing invariant. Use ffi to reproduce real payments. 
+- (0) Check what happens when deposit is 0 and do a whole flow of transferFrom and depositEarnings. Whole flow of withdraw
 - (0) Setup __ReentrancyGuard_init and Check if transferFrom on escrow withdraw works or permit needed. First do deposit
 - (0) Events on _beforeTokenTransfer(after events), think, should do getOwnedRoyalties and depositsOf()
-- (0) Get Owned but not depositted of royalties, in case you do it add this check to mint and safe transfer and safetransfer batch events
 - (0) check expiry date correct in permit and set up tests with current time, check reentrancy
+- (0) forge coverage in test, then disable. Also comment. Test all functions should be paused
+- (0) Try ways of breaking the contract such as sell and then call depositEarnings lastMonthIncDeposited
+- (0) In mumbai let subscription be payed and change one month should be one day for testing

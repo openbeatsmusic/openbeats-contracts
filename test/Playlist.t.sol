@@ -61,6 +61,60 @@ contract PlaylistTest is Test {
         vm.stopPrank();
     }
 
+    function test__DepositEarnings() public {
+        uint256 id0 = 0;
+        uint256 id1 = 1;
+        // Earnings of id2 should always be 0 when no earnings are in place
+        uint256 id2 = 2;
+        uint256[] memory ids = new uint256[](3);
+        uint256[] memory amounts = new uint256[](3);
+        ids[0] = id0;
+        ids[1] = id1;
+        ids[2] = id2;
+        amounts[0] = plan * 3 / 4 / 3;
+        amounts[1] = plan * 3 / 4 / 3;
+        amounts[2] = 0;
+        vm.startPrank(alice);
+        playlist.mint(id0, tokenAmount);
+        playlist.mint(id1, tokenAmount);
+        playlist.mint(id2, tokenAmount);
+
+        assertEq(playlist.earningsOf(alice, id0), 0);
+        assertEq(playlist.earningsOf(alice, id1), 0);
+        assertEq(playlist.earningsOf(alice, id2), 0);
+
+        for (uint256 i = 0; i < 2; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+
+        assertEq(playlist.earningsOf(alice, id0), amounts[0] * 2);
+        assertEq(playlist.earningsOf(alice, id1), amounts[1] * 2);
+        assertEq(playlist.earningsOf(alice, id2), 0);
+
+        playlist.depositEarnings(ids);
+        assertEq(playlist.earningsOf(alice, id0), 0);
+        assertEq(playlist.earningsOf(alice, id1), 0);
+        assertEq(playlist.earningsOf(alice, id2), 0);
+        assertEq(playlist.depositsOf(alice), amounts[0] * 2 + amounts[1] * 2);
+
+        // If id2 has earnings then it should work as expected
+        amounts[2] = plan * 3 / 4 / 3;
+
+        for (uint256 i = 0; i < 2; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+
+        assertEq(playlist.earningsOf(alice, id0), amounts[0] * 4);
+        assertEq(playlist.earningsOf(alice, id1), amounts[1] * 4);
+        assertEq(playlist.earningsOf(alice, id2), amounts[2] * 2);
+
+        vm.stopPrank();
+    }
+
     function test_Init() public {
         assertEq(playlist.getInitializedVersion(), 1);
         assertEq(playlist.name(), "OpenBeats");
@@ -236,9 +290,9 @@ contract PlaylistTest is Test {
         vm.startPrank(alice);
         playlist.mint(id, tokenAmount);
         playlist.setPaused(true);
-        vm.expectRevert("Token transfers paused");
+        vm.expectRevert("Contract paused");
         playlist.mint(1, tokenAmount);
-        vm.expectRevert("Token transfers paused");
+        vm.expectRevert("Contract paused");
         playlist.safeTransferFrom(alice, address(3), id, 3333, "");
         vm.stopPrank();
     }
@@ -374,8 +428,6 @@ contract PlaylistTest is Test {
         playlist.safeBatchTransferFrom(alice, address(3), ids, transferAmounts, "");
         assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 4);
 
-        skip(5 days);
-
         for (uint256 i = 0; i < 3; i++) {
             playlist.payPlan(alice, ids, amounts);
             playlist.payPlan(alice, ids, amounts);
@@ -386,7 +438,7 @@ contract PlaylistTest is Test {
         playlist.safeBatchTransferFrom(address(3), alice, ids, transferAmounts, "");
         assertEq(
             playlist.depositsOf(address(address(3))),
-            plan * 3 / 4 * 4 * (transferAmount0 + transferAmount1) / tokenAmount
+            plan * 3 / 4 * 3 * (transferAmount0 + transferAmount1) / tokenAmount
         );
 
         vm.prank(alice);
@@ -414,9 +466,9 @@ contract PlaylistTest is Test {
             skip(30 days);
         }
         playlist.safeTransferFrom(alice, address(3), ids[0], transferAmount, "");
+        assertEq(playlist.earningsOf(alice, ids[0]), 0);
+        assertEq(playlist.earningsOf(address(3), ids[0]), 0);
         assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 2);
-
-        skip(5 days);
 
         for (uint256 i = 0; i < 3; i++) {
             playlist.payPlan(alice, ids, amounts);
@@ -425,14 +477,20 @@ contract PlaylistTest is Test {
         vm.stopPrank();
         vm.prank(address(3));
         playlist.safeTransferFrom(address(3), alice, ids[0], transferAmount, "");
-        assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 4 * transferAmount / tokenAmount);
+        assertEq(playlist.earningsOf(address(3), ids[0]), 0);
+        assertEq(playlist.earningsOf(alice, ids[0]), 0);
+        assertEq(playlist.depositsOf(address(address(3))), plan * 3 / 4 * 3 * transferAmount / tokenAmount);
 
         vm.prank(alice);
         playlist.safeTransferFrom(alice, address(4), ids[0], transferAmount, "");
+        assertEq(playlist.earningsOf(alice, ids[0]), 0);
+        assertEq(playlist.earningsOf(address(4), ids[0]), 0);
         assertEq(playlist.depositsOf(address(4)), 0);
 
         vm.prank(address(4));
         playlist.safeTransferFrom(address(4), address(5), ids[0], transferAmount, "");
+        assertEq(playlist.earningsOf(address(4), ids[0]), 0);
+        assertEq(playlist.earningsOf(address(5), ids[0]), 0);
         assertEq(playlist.depositsOf(address(4)), 0);
         assertEq(playlist.depositsOf(address(5)), 0);
     }
