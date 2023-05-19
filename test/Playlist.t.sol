@@ -21,7 +21,10 @@ contract PlaylistTest is Test {
     Playlist public playlist;
     uint256 public tokenAmount = 10000;
 
+    event Deposited(address indexed payee, uint256 weiAmount);
+    event EarningsDeposited(uint256 indexed id, address indexed account, uint256 weiAmount);
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
+    event Withdrawn(address indexed payee, uint256 weiAmount);
 
     function setUp() public {
         setUpDate();
@@ -72,7 +75,7 @@ contract PlaylistTest is Test {
         ids[0] = id0;
         ids[1] = id1;
         ids[2] = id2;
-        amounts[0] = plan * 3 / 4 / 3;
+        amounts[0] = plan * 3 / 4 / 5;
         amounts[1] = plan * 3 / 4 / 3;
         amounts[2] = 0;
         vm.startPrank(alice);
@@ -98,12 +101,22 @@ contract PlaylistTest is Test {
         assertEq(playlist.earningsOf(alice, id2), 0);
 
         vm.startPrank(alice);
+        vm.expectEmit(true, true, true, true);
+        emit Deposited(alice, amounts[0] * 2);
+        vm.expectEmit(true, true, true, true);
+        emit EarningsDeposited(id0, alice, amounts[0] * 2);
+        vm.expectEmit(true, true, true, true);
+        emit Deposited(alice, amounts[1] * 2);
+        vm.expectEmit(true, true, true, true);
+        emit EarningsDeposited(id1, alice, amounts[1] * 2);
         playlist.depositEarnings(ids);
         assertEq(playlist.earningsOf(alice, id0), 0);
         assertEq(playlist.earningsOf(alice, id1), 0);
         assertEq(playlist.earningsOf(alice, id2), 0);
         assertEq(playlist.depositsOf(alice), amounts[0] * 2 + amounts[1] * 2);
         uint256 balancePrevWitdraw = dai.balanceOf(alice);
+        vm.expectEmit(true, true, true, true);
+        emit Withdrawn(alice, amounts[0] * 2 + amounts[1] * 2);
         playlist.withdraw();
         assertEq(dai.balanceOf(alice), balancePrevWitdraw + amounts[0] * 2 + amounts[1] * 2);
         assertEq(playlist.depositsOf(alice), 0);

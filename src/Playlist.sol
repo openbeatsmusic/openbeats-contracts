@@ -42,6 +42,9 @@ contract Playlist is
     uint256 private _nextId;
     uint256 private _timestamp;
 
+    /// @notice Not a treasury event yet since we have that info in the backend
+    event EarningsDeposited(uint256 indexed id, address indexed account, uint256 weiAmount);
+
     /// @dev Avoid leaving a contract uninitialized => An uninitialized contract can be taken over by an attacker
     constructor() {
         _disableInitializers();
@@ -220,6 +223,8 @@ contract Playlist is
             /// penalization
             _lastMonthIncDeposited[id][account] = monthCounter - 1;
             _escrow.deposit(earnings, account);
+
+            emit EarningsDeposited(id, account, earnings);
         }
     }
 
