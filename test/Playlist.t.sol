@@ -136,6 +136,60 @@ contract PlaylistTest is Test {
         assertEq(playlist.earningsOf(alice, id0), amounts[0] * 4);
         assertEq(playlist.earningsOf(alice, id1), amounts[1] * 4);
         assertEq(playlist.earningsOf(alice, id2), amounts[2] * 2);
+
+        vm.startPrank(alice);
+        playlist.depositEarnings(ids);
+        assertEq(playlist.earningsOf(alice, id0), 0);
+        assertEq(playlist.earningsOf(alice, id1), 0);
+        assertEq(playlist.earningsOf(alice, id2), 0);
+        assertEq(playlist.depositsOf(alice), amounts[0] * 4 + amounts[1] * 4 + amounts[2] * 2);
+        uint256 _balancePrevWitdraw = dai.balanceOf(alice);
+        playlist.withdraw();
+        assertEq(dai.balanceOf(alice), _balancePrevWitdraw + amounts[0] * 4 + amounts[1] * 4 + amounts[2] * 2);
+        assertEq(playlist.depositsOf(alice), 0);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        // It is * 2 from previous 2 payments, since payPlan modifies monthCounter
+        playlist.payPlan(alice, ids, amounts);
+
+        assertEq(playlist.earningsOf(alice, id0), amounts[0] * 2);
+        assertEq(playlist.earningsOf(alice, id1), amounts[1] * 2);
+        assertEq(playlist.earningsOf(alice, id2), amounts[2] * 2);
+    }
+
+    function test__DepositEarningsAndTransferFrom() public {
+        uint256 transferAmount = 3333;
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        ids[0] = 0;
+        amounts[0] = plan * 3 / 4;
+        vm.prank(alice);
+        playlist.mint(ids[0], tokenAmount);
+
+        assertEq(playlist.earningsOf(alice, ids[0]), 0);
+
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < 2; i++) {
+            playlist.payPlan(alice, ids, amounts);
+            skip(30 days);
+        }
+        vm.stopPrank();
+
+        assertEq(playlist.earningsOf(alice, ids[0]), amounts[0]);
+
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < 2; i++) {
+            skip(30 days);
+            playlist.payPlan(alice, ids, amounts);
+        }
+        vm.stopPrank();
+
+        assertEq(playlist.earningsOf(alice, ids[0]), amounts[0] * 3);
+        vm.startPrank(alice);
+        playlist.safeTransferFrom(alice, address(3), ids[0], transferAmount, "");
+        assertEq(playlist.depositsOf(alice), amounts[0] * 3);
+        assertEq(playlist.earningsOf(alice, ids[0]), 0);
     }
 
     function test_Init() public {
