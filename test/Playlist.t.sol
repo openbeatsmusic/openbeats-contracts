@@ -82,6 +82,8 @@ contract PlaylistTest is Test {
         playlist.mint(id0, tokenAmount);
         playlist.mint(id1, tokenAmount);
         playlist.mint(id2, tokenAmount);
+        playlist.depositEarnings(ids);
+        assertEq(playlist.depositsOf(alice), 0);
         vm.stopPrank();
 
         assertEq(playlist.earningsOf(alice, id0), 0);
