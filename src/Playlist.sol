@@ -38,7 +38,6 @@ contract Playlist is
     bytes32 public immutable symbol = "OB";
 
     Escrow private _escrow;
-    uint96 private _feesEarned;
     /// Id of next minted nft
     uint256 private _nextId;
     uint256 private _timestamp;
@@ -81,7 +80,6 @@ contract Playlist is
 
     function payFirstPlan(address from) public onlyOwner {
         require(!paused, "Contract paused");
-        uint96 fee = 4 * 1e18;
         uint256 plan = 4 * 1e18;
 
         uint256 timestampDiff = block.timestamp - _timestamp;
@@ -92,11 +90,7 @@ contract Playlist is
             _timestamp = block.timestamp;
         }
 
-        unchecked {
-            _feesEarned += fee;
-        }
-
-        TransferHelper.safeTransferFrom(currency, from, address(this), plan);
+        TransferHelper.safeTransferFrom(currency, from, super.owner(), plan);
     }
 
     function payPlan(address from, uint256[] calldata ids, uint256[] calldata amounts) public onlyOwner {
@@ -104,7 +98,6 @@ contract Playlist is
         require(ids.length == amounts.length, "Array mismatch");
         require(ids.length <= 30, "Exceeded length");
 
-        uint96 fee = 1 * 1e18;
         uint256 plan = 4 * 1e18;
         uint256 maxAmount = 3 * 1e18;
         uint256 _maxAmount;
@@ -123,9 +116,6 @@ contract Playlist is
             _timestamp = block.timestamp;
         }
 
-        unchecked {
-            _feesEarned += fee;
-        }
         uint256 _monthCounter = monthCounter;
         unchecked {
             for (uint256 i = 0; i < ids.length; i++) {
@@ -135,7 +125,8 @@ contract Playlist is
             }
         }
         // We send the funds directly to the escrow
-        TransferHelper.safeTransferFrom(currency, from, address(_escrow), plan);
+        TransferHelper.safeTransferFrom(currency, from, address(_escrow), _maxAmount);
+        TransferHelper.safeTransferFrom(currency, from, super.owner(), plan - _maxAmount);
     }
 
     function withdraw() public {
@@ -152,10 +143,6 @@ contract Playlist is
     /// @param payee The creditor's address.
     function depositsOf(address payee) public view returns (uint256) {
         return _escrow.depositsOf(payee);
-    }
-
-    function getFeesEarned() public view onlyOwner returns (uint256) {
-        return _feesEarned;
     }
 
     /// @dev Returns the highest version that has been initialized. See {reinitializer}.

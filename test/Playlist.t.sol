@@ -8,6 +8,7 @@ import "./utils/SigUtils.sol";
 import "src/tokens/MockDAI.sol";
 
 contract PlaylistTest is Test {
+    address public owner = address(50);
     address public alice;
     uint256 public aliceBalance = 1000 * 1e18;
     uint256 public alicePrivateKey;
@@ -53,7 +54,7 @@ contract PlaylistTest is Test {
     }
 
     function setUpProxy() public {
-        vm.startPrank(alice);
+        vm.startPrank(owner);
         address implementation = address(new Playlist());
         address playlistProxy = address(new PlaylistProxy(implementation, ""));
         playlist = Playlist(playlistProxy);
@@ -78,21 +79,25 @@ contract PlaylistTest is Test {
         playlist.mint(id0, tokenAmount);
         playlist.mint(id1, tokenAmount);
         playlist.mint(id2, tokenAmount);
+        vm.stopPrank();
 
         assertEq(playlist.earningsOf(alice, id0), 0);
         assertEq(playlist.earningsOf(alice, id1), 0);
         assertEq(playlist.earningsOf(alice, id2), 0);
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 2; i++) {
             playlist.payPlan(alice, ids, amounts);
             playlist.payPlan(alice, ids, amounts);
             skip(30 days);
         }
+        vm.stopPrank();
 
         assertEq(playlist.earningsOf(alice, id0), amounts[0] * 2);
         assertEq(playlist.earningsOf(alice, id1), amounts[1] * 2);
         assertEq(playlist.earningsOf(alice, id2), 0);
 
+        vm.startPrank(alice);
         playlist.depositEarnings(ids);
         assertEq(playlist.earningsOf(alice, id0), 0);
         assertEq(playlist.earningsOf(alice, id1), 0);
@@ -102,21 +107,22 @@ contract PlaylistTest is Test {
         playlist.withdraw();
         assertEq(dai.balanceOf(alice), balancePrevWitdraw + amounts[0] * 2 + amounts[1] * 2);
         assertEq(playlist.depositsOf(alice), 0);
+        vm.stopPrank();
 
         // If id2 has earnings then it should work as expected
         amounts[2] = plan * 3 / 4 / 3;
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 2; i++) {
             playlist.payPlan(alice, ids, amounts);
             playlist.payPlan(alice, ids, amounts);
             skip(30 days);
         }
+        vm.stopPrank();
 
         assertEq(playlist.earningsOf(alice, id0), amounts[0] * 4);
         assertEq(playlist.earningsOf(alice, id1), amounts[1] * 4);
         assertEq(playlist.earningsOf(alice, id2), amounts[2] * 2);
-
-        vm.stopPrank();
     }
 
     function test_Init() public {
@@ -136,10 +142,11 @@ contract PlaylistTest is Test {
     }
 
     function test_PayFirstPlan() public {
-        vm.startPrank(alice);
+        assertEq(dai.balanceOf(alice), aliceBalance);
+        vm.prank(owner);
         playlist.payFirstPlan(alice);
-        assertEq(playlist.getFeesEarned(), plan);
-        vm.stopPrank();
+        assertEq(dai.balanceOf(alice), aliceBalance - plan);
+        assertEq(dai.balanceOf(owner), plan);
     }
 
     function test_PayPlan() public {
@@ -208,27 +215,58 @@ contract PlaylistTest is Test {
         amounts[28] = royaltyAmount;
         amounts[29] = royaltyAmount;
 
-        vm.startPrank(alice);
+        vm.startPrank(owner);
         for (uint256 i = 0; i < royaltyLength; i++) {
             playlist.mint(i, tokenAmount);
         }
         assertEq(dai.balanceOf(alice), aliceBalance);
         playlist.payPlan(alice, ids, amounts);
-        assertEq(playlist.getFeesEarned(), plan * 1 / 4);
+        assertEq(dai.balanceOf(alice), aliceBalance - plan);
+        assertEq(dai.balanceOf(owner), plan - royaltyAmount * 30);
         vm.stopPrank();
 
         for (uint256 i = 0; i < royaltyLength; i++) {
             assertEq(playlist.treasuryOfPlaylist(i, playlist.monthCounter()), royaltyAmount);
         }
+    }
+
+    function test_PayPlanWhenNoAmount() public {
+        uint256 royaltyLength = 2;
+        uint256[] memory idsEmpty = new uint256[](0);
+        uint256[] memory amountsEmpty = new uint256[](0);
+        uint256[] memory ids = new uint256[](2);
+        uint256[] memory amounts = new uint256[](2);
+        ids[0] = 0;
+        ids[1] = 1;
+        amounts[0] = 0;
+        amounts[1] = 0;
+
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < royaltyLength; i++) {
+            playlist.mint(i, tokenAmount);
+        }
+        assertEq(dai.balanceOf(alice), aliceBalance);
+        playlist.payPlan(alice, ids, amounts);
         assertEq(dai.balanceOf(alice), aliceBalance - plan);
+        assertEq(dai.balanceOf(owner), plan);
+
+        playlist.payPlan(alice, idsEmpty, amountsEmpty);
+        assertEq(dai.balanceOf(alice), aliceBalance - plan * 2);
+        assertEq(dai.balanceOf(owner), plan * 2);
+
+        for (uint256 i = 0; i < royaltyLength; i++) {
+            assertEq(playlist.treasuryOfPlaylist(i, playlist.monthCounter()), 0);
+        }
+
+        vm.stopPrank();
     }
 
     function test_Owner() public {
-        assertEq(playlist.owner(), alice);
+        assertEq(playlist.owner(), owner);
     }
 
     function test_Paused() public {
-        vm.startPrank(alice);
+        vm.startPrank(owner);
         assertEq(playlist.paused(), false);
         playlist.setPaused(true);
         assertEq(playlist.paused(), true);
@@ -242,7 +280,7 @@ contract PlaylistTest is Test {
         uint256[] memory amounts = new uint256[](1);
         ids[0] = 0;
         amounts[0] = plan;
-        vm.prank(alice);
+        vm.prank(owner);
         vm.expectRevert("MaxAmount");
         playlist.payPlan(alice, ids, amounts);
     }
@@ -256,8 +294,6 @@ contract PlaylistTest is Test {
         vm.startPrank(address(2));
         playlist.payPlan(alice, ids, amounts);
         vm.expectRevert("Ownable: caller is not the owner");
-        playlist.getFeesEarned();
-        vm.expectRevert("Ownable: caller is not the owner");
         playlist.setPaused(true);
         vm.stopPrank();
     }
@@ -269,10 +305,12 @@ contract PlaylistTest is Test {
 
     function test_RevertWhen_Paused() public {
         uint256 id = 0;
-        vm.startPrank(alice);
+        vm.prank(alice);
         playlist.mint(id, tokenAmount);
+        vm.prank(owner);
         playlist.setPaused(true);
         vm.expectRevert("Contract paused");
+        vm.startPrank(alice);
         playlist.mint(1, tokenAmount);
         vm.expectRevert("Contract paused");
         playlist.safeTransferFrom(alice, address(3), id, 3333, "");
@@ -285,7 +323,7 @@ contract PlaylistTest is Test {
         ids[0] = 0;
         amounts[0] = plan / 4 * 3;
         amounts[1] = plan / 4 * 3;
-        vm.prank(alice);
+        vm.prank(owner);
         vm.expectRevert("Array mismatch");
         playlist.payPlan(alice, ids, amounts);
     }
@@ -357,16 +395,16 @@ contract PlaylistTest is Test {
         amounts[28] = royaltyAmount;
         amounts[29] = royaltyAmount;
         amounts[30] = royaltyAmount;
-        vm.prank(alice);
+        vm.prank(owner);
         vm.expectRevert("Exceeded length");
         playlist.payPlan(alice, ids, amounts);
     }
 
     function test_RevertWhen_RenounceOwnership() public {
-        vm.prank(alice);
+        vm.prank(owner);
         vm.expectRevert("Cannot renounce ownership");
         playlist.renounceOwnership();
-        assertEq(playlist.owner(), alice);
+        assertEq(playlist.owner(), owner);
     }
 
     function test_RevertWhen_UpgradeNotApproved() public {
@@ -401,19 +439,26 @@ contract PlaylistTest is Test {
         vm.startPrank(alice);
         playlist.mint(id0, tokenAmount);
         playlist.mint(id1, tokenAmount);
+        vm.stopPrank();
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 3; i++) {
             playlist.payPlan(alice, ids, amounts);
             playlist.payPlan(alice, ids, amounts);
             skip(30 days);
         }
+        vm.stopPrank();
+
+        vm.startPrank(alice);
         playlist.safeBatchTransferFrom(alice, address(3), ids, transferAmounts, "");
         assertEq(playlist.depositsOf(alice), plan * 3 / 4 * 4);
         uint256 balancePrevWitdraw = dai.balanceOf(alice);
         playlist.withdraw();
         assertEq(dai.balanceOf(alice), balancePrevWitdraw + plan * 3 / 4 * 4);
         assertEq(playlist.depositsOf(alice), 0);
+        vm.stopPrank();
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 3; i++) {
             playlist.payPlan(alice, ids, amounts);
             playlist.payPlan(alice, ids, amounts);
@@ -450,13 +495,17 @@ contract PlaylistTest is Test {
         ids[0] = 0;
         amounts[0] = plan / 4 * 3;
 
-        vm.startPrank(alice);
+        vm.prank(alice);
         playlist.mint(ids[0], tokenAmount);
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 3; i++) {
             playlist.payPlan(alice, ids, amounts);
             skip(30 days);
         }
+        vm.stopPrank();
+
+        vm.startPrank(alice);
         playlist.safeTransferFrom(alice, address(3), ids[0], transferAmount, "");
         assertEq(playlist.earningsOf(alice, ids[0]), 0);
         assertEq(playlist.earningsOf(address(3), ids[0]), 0);
@@ -465,7 +514,9 @@ contract PlaylistTest is Test {
         playlist.withdraw();
         assertEq(dai.balanceOf(alice), balancePrevWitdraw + plan * 3 / 4 * 2);
         assertEq(playlist.depositsOf(alice), 0);
+        vm.stopPrank();
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 3; i++) {
             playlist.payPlan(alice, ids, amounts);
             skip(30 days);
@@ -503,7 +554,7 @@ contract PlaylistTest is Test {
     }
 
     function test_UpgradeApproved() public {
-        vm.startPrank(alice);
+        vm.startPrank(owner);
         address newImplementation = address(new Playlist());
         playlist.upgradeTo(newImplementation);
         assertEq(playlist.name(), "OpenBeats");
