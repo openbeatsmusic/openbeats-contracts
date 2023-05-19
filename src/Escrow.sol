@@ -60,7 +60,7 @@ contract Escrow is Ownable {
 
         _deposits[payee] = 0;
 
-        TransferHelper.safeTransferFrom(_currency, super.owner(), payee, payment);
+        TransferHelper.safeTransfer(_currency, payee, payment);
 
         emit Withdrawn(payee, payment);
     }
