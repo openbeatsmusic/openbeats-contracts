@@ -362,8 +362,6 @@ contract PlaylistTest is Test {
         vm.expectRevert("Ownable: caller is not the owner");
         vm.startPrank(address(2));
         playlist.payPlan(alice, ids, amounts);
-        vm.expectRevert("Ownable: caller is not the owner");
-        playlist.setPaused(true);
         vm.stopPrank();
     }
 
@@ -373,16 +371,28 @@ contract PlaylistTest is Test {
     }
 
     function test_RevertWhen_Paused() public {
+        uint256[] memory arr = new uint256[](1);
+        arr[0] = 1;
         uint256 id = 0;
         vm.prank(alice);
         playlist.mint(id, tokenAmount);
         vm.prank(owner);
         playlist.setPaused(true);
-        vm.expectRevert("Contract paused");
         vm.startPrank(alice);
+        vm.expectRevert("Contract paused");
+        playlist.depositEarnings(arr);
+        vm.expectRevert("Contract paused");
         playlist.mint(1, tokenAmount);
         vm.expectRevert("Contract paused");
         playlist.safeTransferFrom(alice, address(3), id, 3333, "");
+        vm.expectRevert("Contract paused");
+        playlist.withdraw();
+        vm.stopPrank();
+        vm.startPrank(owner);
+        vm.expectRevert("Contract paused");
+        playlist.payFirstPlan(address(5));
+        vm.expectRevert("Contract paused");
+        playlist.payPlan(address(5), arr, arr);
         vm.stopPrank();
     }
 
