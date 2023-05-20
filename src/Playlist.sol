@@ -152,6 +152,23 @@ contract Playlist is
         return _escrow.depositsOf(payee);
     }
 
+    /// Earnings since last deposit of earnings
+    function earningsOf(address account, uint256 id) public view returns (uint256) {
+        uint256 lastMonthIncDeposited = _lastMonthIncDeposited[id][account];
+        uint256 newMonthNoDeposit = lastMonthIncDeposited + 1;
+        bool shouldDeposit = (monthCounter - lastMonthIncDeposited) > 1 ? true : false;
+        /// If nothing is found then _lastMonthIncDeposited[id][account] is 0
+        if (lastMonthIncDeposited == 0 || !shouldDeposit) {
+            return 0;
+        }
+        uint256 earnings = 0;
+        for (uint256 m = newMonthNoDeposit; m < monthCounter; ++m) {
+            earnings +=
+                treasuryOfPlaylist[id][m] * _balanceOfMonth[id][account][lastMonthIncDeposited] / totalSupply(id);
+        }
+        return earnings;
+    }
+
     /// @dev Returns the highest version that has been initialized. See {reinitializer}.
     function getInitializedVersion() public view returns (uint8) {
         return Initializable._getInitializedVersion();
@@ -230,22 +247,5 @@ contract Playlist is
 
             emit EarningsDeposited(id, account, earnings);
         }
-    }
-
-    /// Earnings since last deposit of earnings
-    function earningsOf(address account, uint256 id) public view returns (uint256) {
-        uint256 lastMonthIncDeposited = _lastMonthIncDeposited[id][account];
-        uint256 newMonthNoDeposit = lastMonthIncDeposited + 1;
-        bool shouldDeposit = (monthCounter - lastMonthIncDeposited) > 1 ? true : false;
-        /// If nothing is found then _lastMonthIncDeposited[id][account] is 0
-        if (lastMonthIncDeposited == 0 || !shouldDeposit) {
-            return 0;
-        }
-        uint256 earnings = 0;
-        for (uint256 m = newMonthNoDeposit; m < monthCounter; ++m) {
-            earnings +=
-                treasuryOfPlaylist[id][m] * _balanceOfMonth[id][account][lastMonthIncDeposited] / totalSupply(id);
-        }
-        return earnings;
     }
 }
