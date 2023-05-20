@@ -211,11 +211,15 @@ contract PlaylistTest is Test {
     }
 
     function test_PayFirstPlan() public {
+        uint256 monthCounter = 2;
+        assertEq(playlist.monthCounter(), monthCounter);
+        skip(30 days);
         assertEq(dai.balanceOf(alice), aliceBalance);
         vm.prank(owner);
         playlist.payFirstPlan(alice);
         assertEq(dai.balanceOf(alice), aliceBalance - plan);
         assertEq(dai.balanceOf(owner), plan);
+        assertEq(playlist.monthCounter(), monthCounter + 1);
     }
 
     function test_PayPlan() public {
@@ -368,6 +372,11 @@ contract PlaylistTest is Test {
     function test_RevertWhen_InitializeAgain() public {
         vm.expectRevert("Initializable: contract is already initialized");
         playlist.initialize(address(dai));
+    }
+
+    function test_RevertWhen_MintWrongId() public {
+        vm.expectRevert("Wrong id");
+        playlist.mint(1, tokenAmount);
     }
 
     function test_RevertWhen_Paused() public {
