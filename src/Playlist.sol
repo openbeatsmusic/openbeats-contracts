@@ -9,6 +9,8 @@ import {ERC1155SupplyUpgradeable} from
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 /// No need to resetRoyalty in burn since playlist has no burn implemented
 import {ERC2981Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/common/ERC2981Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "./libraries/TransferHelper.sol";
 import {Escrow} from "./Escrow.sol";
@@ -18,6 +20,7 @@ contract Playlist is
     ERC1155SupplyUpgradeable,
     ERC2981Upgradeable,
     OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     /// NFT id => monthCounter =>  treasuryOfPlaylist
@@ -64,11 +67,12 @@ contract Playlist is
         __ERC1155Supply_init();
         __ERC2981_init();
         __Ownable_init();
+        __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
         _setDefaultRoyalty(super.owner(), 500);
     }
 
-    function depositEarnings(uint256[] calldata ids) public {
+    function depositEarnings(uint256[] calldata ids) public nonReentrant {
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
             _depositEarnings(_msgSender(), id);
@@ -132,7 +136,7 @@ contract Playlist is
         TransferHelper.safeTransferFrom(currency, from, super.owner(), plan - _maxAmount);
     }
 
-    function withdraw() public {
+    function withdraw() public nonReentrant {
         require(!paused, "Contract paused");
         _escrow.withdraw(_msgSender());
     }
@@ -180,7 +184,7 @@ contract Playlist is
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) internal override(ERC1155Upgradeable, ERC1155SupplyUpgradeable) {
+    ) internal override(ERC1155Upgradeable, ERC1155SupplyUpgradeable) nonReentrant {
         /// Contract paused for mints and transfers
         require(!paused, "Contract paused");
         ERC1155SupplyUpgradeable._beforeTokenTransfer(operator, from, to, ids, amounts, data);
