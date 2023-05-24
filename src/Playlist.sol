@@ -42,7 +42,7 @@ contract Playlist is
 
     Escrow private _escrow;
     /// Id of next minted nft
-    uint256 private _nextId;
+    uint256 private _nextId = 0;
     uint256 private _timestamp;
 
     /// @notice Not a treasury event yet since we have that info in the backend
