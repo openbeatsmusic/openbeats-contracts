@@ -79,6 +79,7 @@ contract Playlist is
         }
     }
 
+    /// @dev id is need to be saved on frontend
     function mint(uint256 id, uint256 supply) public {
         require(id == _nextId, "Wrong id");
         _nextId += 1;
