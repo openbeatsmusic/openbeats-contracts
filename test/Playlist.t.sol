@@ -10,6 +10,7 @@ import "src/tokens/MockDAI.sol";
 
 contract PlaylistTest is Test {
     address public owner = address(50);
+    address public adan = address(100);
     address public alice;
     uint256 public aliceBalance = 1000 * 1e18;
     uint256 public alicePrivateKey;
@@ -69,10 +70,11 @@ contract PlaylistTest is Test {
     }
 
     function setUpWhitelist() public {
-        vm.prank(owner);
+        vm.startPrank(owner);
+        playlist.whitelistUser(adan, true);
         playlist.whitelistUser(alice, true);
-        vm.prank(owner);
         playlist.whitelistUser(owner, true);
+        vm.stopPrank();
     }
 
     function test__DepositEarnings() public {
@@ -218,6 +220,7 @@ contract PlaylistTest is Test {
         playlist.mint(id, tokenAmount);
         assertEq(playlist.balanceOf(alice, id), tokenAmount);
         assertEq(playlist.depositsOf(alice), 0);
+        assertEq(playlist.numberOfMints(alice), 1);
     }
 
     function test_PayFirstPlan() public {
@@ -298,8 +301,20 @@ contract PlaylistTest is Test {
         amounts[28] = royaltyAmount;
         amounts[29] = royaltyAmount;
 
+        vm.startPrank(adan);
+        for (uint256 i = 0; i < 10; i++) {
+            playlist.mint(i, tokenAmount);
+        }
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        for (uint256 i = 10; i < 20; i++) {
+            playlist.mint(i, tokenAmount);
+        }
+        vm.stopPrank();
+
         vm.startPrank(owner);
-        for (uint256 i = 0; i < royaltyLength; i++) {
+        for (uint256 i = 20; i < 30; i++) {
             playlist.mint(i, tokenAmount);
         }
         assertEq(dai.balanceOf(alice), aliceBalance);
@@ -382,6 +397,19 @@ contract PlaylistTest is Test {
     function test_RevertWhen_InitializeAgain() public {
         vm.expectRevert("Initializable: contract is already initialized");
         playlist.initialize(address(dai));
+    }
+
+    function test_RevertWhen_maxMintPerUserExceeded() public {
+        vm.prank(owner);
+        playlist.whitelistUser(address(30), true);
+        vm.startPrank(address(30));
+        for (uint256 i = 0; i < 10; i++) {
+            playlist.mint(i, tokenAmount);
+            assertEq(playlist.numberOfMints(address(30)), i + 1);
+        }
+        vm.expectRevert("Exceeded max number of mints");
+        playlist.mint(10, tokenAmount);
+        vm.stopPrank();
     }
 
     function test_RevertWhen_MintWrongId() public {

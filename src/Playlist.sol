@@ -23,8 +23,10 @@ contract Playlist is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    // user => whitelist
+    /// user => whitelist
     mapping(address => bool) public userWhitelisted;
+    /// user => numberOfMints
+    mapping(address => uint256) public numberOfMints;
     /// NFT id => monthCounter =>  treasuryOfPlaylist
     mapping(uint256 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
 
@@ -36,15 +38,17 @@ contract Playlist is
     /// NFT id => Address => firstNoDepositedMonth => _balanceOfMonth
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) private _balanceOfMonth;
 
+    /// @dev Variables initialized below
     address public currency;
     bool public paused;
+    uint256 public maxMintPerUser;
     uint256 public monthCounter;
     bytes32 public immutable name = "OpenBeats";
     bytes32 public immutable symbol = "OB";
 
     Escrow private _escrow;
     /// Id of next minted nft
-    uint256 private _nextId = 0;
+    uint256 private _nextId;
     uint256 private _timestamp;
 
     /// @notice Not a treasury event yet since we have that info in the backend
@@ -61,6 +65,7 @@ contract Playlist is
     /// @dev Royalties are sent to owner of the contract, 5% royalties set
     function initialize(address currency_) external initializer {
         currency = currency_;
+        maxMintPerUser = 10;
         /// MonthCounter should always be >= 2
         monthCounter = 2;
         paused = false;
@@ -85,9 +90,11 @@ contract Playlist is
 
     /// @dev id is need to be saved on frontend
     function mint(uint256 id, uint256 supply) public {
-        require(userWhitelisted[msg.sender], "Not whitelisted");
+        require(userWhitelisted[_msgSender()], "Not whitelisted");
+        require(numberOfMints[_msgSender()] < maxMintPerUser, "Exceeded max number of mints");
         require(id == _nextId, "Wrong id");
         _nextId += 1;
+        numberOfMints[_msgSender()] = numberOfMints[_msgSender()] + 1;
         super._mint(_msgSender(), id, supply, "");
     }
 
