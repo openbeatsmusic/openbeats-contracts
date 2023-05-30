@@ -23,6 +23,8 @@ contract Playlist is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
+    // user => whitelist
+    mapping(address => bool) public userWhitelisted;
     /// NFT id => monthCounter =>  treasuryOfPlaylist
     mapping(uint256 => mapping(uint256 => uint256)) public treasuryOfPlaylist;
 
@@ -47,6 +49,8 @@ contract Playlist is
 
     /// @notice Not a treasury event yet since we have that info in the backend
     event EarningsDeposited(uint256 indexed id, address indexed account, uint256 weiAmount);
+
+    event UserWhitelisted(address indexed user, bool whitelist, uint256 timestamp);
 
     /// @dev Avoid leaving a contract uninitialized => An uninitialized contract can be taken over by an attacker
     constructor() {
@@ -81,6 +85,7 @@ contract Playlist is
 
     /// @dev id is need to be saved on frontend
     function mint(uint256 id, uint256 supply) public {
+        require(userWhitelisted[msg.sender], "Not whitelisted");
         require(id == _nextId, "Wrong id");
         _nextId += 1;
         super._mint(_msgSender(), id, supply, "");
@@ -135,6 +140,12 @@ contract Playlist is
         // We send the funds directly to the escrow
         TransferHelper.safeTransferFrom(currency, from, address(_escrow), _maxAmount);
         TransferHelper.safeTransferFrom(currency, from, super.owner(), plan - _maxAmount);
+    }
+
+    // Whitelist initial users
+    function whitelistUser(address user, bool whitelist) public onlyOwner {
+        userWhitelisted[user] = whitelist;
+        emit UserWhitelisted(user, whitelist, block.timestamp);
     }
 
     function withdraw() public nonReentrant {

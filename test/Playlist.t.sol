@@ -1,3 +1,4 @@
+// solhint-disable not-rely-on-time
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.18;
 
@@ -24,6 +25,7 @@ contract PlaylistTest is Test {
     event Deposited(address indexed payee, uint256 weiAmount);
     event EarningsDeposited(uint256 indexed id, address indexed account, uint256 weiAmount);
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
+    event UserWhitelisted(address indexed user, bool whitelist, uint256 timestamp);
     event Withdrawn(address indexed payee, uint256 weiAmount);
 
     function setUp() public {
@@ -36,6 +38,7 @@ contract PlaylistTest is Test {
         setUpProxy();
 
         setUpPermit();
+        setUpWhitelist();
         deal(address(dai), alice, aliceBalance);
     }
 
@@ -63,6 +66,13 @@ contract PlaylistTest is Test {
         playlist = Playlist(playlistProxy);
         playlist.initialize(address(dai));
         vm.stopPrank();
+    }
+
+    function setUpWhitelist() public {
+        vm.prank(owner);
+        playlist.whitelistUser(alice, true);
+        vm.prank(owner);
+        playlist.whitelistUser(owner, true);
     }
 
     function test__DepositEarnings() public {
@@ -375,8 +385,14 @@ contract PlaylistTest is Test {
     }
 
     function test_RevertWhen_MintWrongId() public {
+        vm.prank(alice);
         vm.expectRevert("Wrong id");
         playlist.mint(1, tokenAmount);
+    }
+
+    function test_RevertWhen_NotWhitelisted() public {
+        vm.expectRevert("Not whitelisted");
+        playlist.mint(0, tokenAmount);
     }
 
     function test_RevertWhen_Paused() public {
@@ -668,5 +684,18 @@ contract PlaylistTest is Test {
         //     __UUPSUpgradeable_init();
         //     _setDefaultRoyalty(super.owner(), 500);
         // }
+    }
+
+    function test_WhitelistUser() public {
+        vm.startPrank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit UserWhitelisted(address(2), true, block.timestamp);
+        playlist.whitelistUser(address(2), true);
+        assertEq(playlist.userWhitelisted(address(2)), true);
+        vm.expectEmit(true, true, true, true);
+        emit UserWhitelisted(address(2), false, block.timestamp);
+        playlist.whitelistUser(address(2), false);
+        assertEq(playlist.userWhitelisted(address(2)), false);
+        vm.stopPrank();
     }
 }
