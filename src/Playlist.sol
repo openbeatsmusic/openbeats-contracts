@@ -142,7 +142,7 @@ contract Playlist is
         TransferHelper.safeTransferFrom(currency, from, super.owner(), plan - _maxAmount);
     }
 
-    // Whitelist initial users
+    /// @dev Whitelist initial users
     function whitelistUser(address user, bool whitelist) public onlyOwner {
         userWhitelisted[user] = whitelist;
         emit UserWhitelisted(user, whitelist, block.timestamp);
