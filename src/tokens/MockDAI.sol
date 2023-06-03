@@ -943,7 +943,7 @@ contract UChildDAI is UChildERC20 {
             )
         );
 
-        require(holder == ecrecover(digest, v, r, s), "UChildDAI: INVALID-PERMIT");
+        // require(holder == ecrecover(digest, v, r, s), "UChildDAI: INVALID-PERMIT");
         require(expiry == 0 || block.timestamp <= expiry, "UChildDAI: PERMIT-EXPIRED");
         require(nonce == nonces[holder]++, "UChildDAI: INVALID-NONCE");
         uint256 wad = allowed ? type(uint256).max : 0;
