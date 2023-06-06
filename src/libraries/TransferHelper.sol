@@ -2,7 +2,6 @@
 pragma solidity =0.8.18;
 
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "forge-std/console.sol";
 
 library TransferHelper {
     /// @notice Transfers tokens from the targeted address to the given destination
