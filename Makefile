@@ -13,4 +13,6 @@ deploy-goerli :; forge clean && forge script script/${contract}.s.sol:Deploy${co
 # Example on how to run this command: "make deploy-mumbai contract=MockDAI"
 deploy-mumbai :; forge clean && forge script script/${contract}.s.sol:Deploy${contract} --rpc-url ${MUMBAI_RPC_URL}  --private-key ${PRIVATE_KEY} --broadcast --verify --etherscan-api-key ${POLYGON_API_KEY} -vvvv
 
+deploy-polygon :; forge clean && forge script script/${contract}.s.sol:Deploy${contract} --rpc-url ${POLYGON_RPC_URL}  --private-key ${PRIVATE_KEY} --broadcast --verify --etherscan-api-key ${POLYGON_API_KEY} -vvvv
+
 deploy-all :; make deploy-${network} contract=APIConsumer && make deploy-${network} contract=KeepersCounter && make deploy-${network} contract=PriceFeedConsumer && make deploy-${network} contract=VRFConsumerV2

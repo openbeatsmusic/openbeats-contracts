@@ -13,9 +13,9 @@ forge test
 
 ## Deploy
 
-### MockDAI Mumbai Testnet
+PlaylistProxy: https://polygonscan.com/address/0xbfa092c8950bd13bfb05689960b4278f7d2a5715
 
-Deployed to address 0xe6beda614e1f6f7b393f5e3190717bd70d3614fe  
+Playlist: https://polygonscan.com/address/0x833a8e809233a63d0ab6060eaa8321e9e5aebdf1
 
 ### TODO:
 
